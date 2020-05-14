@@ -1,5 +1,5 @@
 
-# Copyright (c) 2020 Emilio Reyes (soda480@gmail.com)
+# Copyright (c) 2020 Intel Corporation
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,11 +36,11 @@ use_plugin('filter_resources')
 
 name = 'rest3client'
 authors = [
-    Author('Emilio Reyes', 'soda480@gmail.com')
+    Author('Emilio Reyes', 'emilio.reyes@intel.com')
 ]
 summary = 'A Python class providing primitive methods for enabling consumption of REST APIs'
 url = 'https://github.com/soda480/rest3client'
-version = '0.0.1'
+version = '0.0.2'
 default_task = [
     'clean',
     'analyze',
