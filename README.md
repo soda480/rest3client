@@ -7,7 +7,7 @@ A subclass inheriting RESTclient can override the base methods providing further
 
 ### Installation ###
 ```bash
-pip install git+https://gitlab.com/soda480/rest3client.git
+pip install rest3client
 ```
 
 ### Example Usage ###
