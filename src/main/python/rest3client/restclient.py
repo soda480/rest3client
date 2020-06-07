@@ -103,31 +103,7 @@ class RESTclient(object):
 
         return headers
 
-    def request_handler(function):
-        """ decorator to process arguments and response for request method
-        """
-        def _request_handler(self, *args, **kwargs):
-            """ decorator method to prepare and handle requests and responses
-            """
-            noop = kwargs.pop('noop', False)
-            key_word_arguments = self.process_arguments(args, kwargs)
-
-            redacted_key_word_arguments = redact(key_word_arguments)
-            try:
-                redacted = json.dumps(redact(redacted_key_word_arguments), indent=2, sort_keys=True)
-            except TypeError:
-                redacted = redacted_key_word_arguments
-
-            logger.debug('\n{}: {} NOOP: {}\n{}'.format(
-                function.__name__.upper(), key_word_arguments['address'], noop, redacted))
-            if noop:
-                return
-            response = function(self, *args, **key_word_arguments)
-            return self.process_response(response, **kwargs)
-
-        return _request_handler
-
-    def process_arguments(self, args, kwargs):
+    def get_arguments(self, endpoint, kwargs):
         """ return key word arguments to pass to requests method
         """
         arguments = copy.deepcopy(kwargs)
@@ -141,9 +117,21 @@ class RESTclient(object):
         if 'verify' not in arguments or arguments.get('verify') is None:
             arguments['verify'] = self.cabundle
 
-        arguments['address'] = 'https://{}{}'.format(self.hostname, args[0])
+        arguments['address'] = 'https://{}{}'.format(self.hostname, endpoint)
         arguments.pop('raw_response', None)
         return arguments
+
+    def log_request(self, function_name, arguments, noop):
+        """ log request function name and redacted arguments
+        """
+        redacted_arguments = redact(arguments)
+        try:
+            redacted_arguments = json.dumps(redacted_arguments, indent=2, sort_keys=True)
+        except TypeError:
+            pass
+
+        logger.debug('\n{}: {} NOOP: {}\n{}'.format(
+            function_name, arguments['address'], noop, redacted_arguments))
 
     def get_error_message(self, response):
         """ return error message from response
@@ -183,6 +171,22 @@ class RESTclient(object):
             logger.debug('returning response text')
             return response.text
 
+    def request_handler(function):
+        """ decorator to process arguments and response for request method
+        """
+        def _request_handler(self, endpoint, **kwargs):
+            """ decorator method to prepare and handle requests and responses
+            """
+            noop = kwargs.pop('noop', False)
+            arguments = self.get_arguments(endpoint, kwargs)
+            self.log_request(function.__name__.upper(), arguments, noop)
+            if noop:
+                return
+            response = function(self, endpoint, **arguments)
+            return self.process_response(response, **kwargs)
+
+        return _request_handler
+
     @request_handler
     def post(self, endpoint, **kwargs):
         """ helper method to submit post requests
@@ -191,7 +195,7 @@ class RESTclient(object):
 
     @request_handler
     def put(self, endpoint, **kwargs):
-        """ helper method to submit post requests
+        """ helper method to submit put requests
         """
         return requests.put(kwargs.pop('address'), **kwargs)
 
@@ -209,7 +213,7 @@ class RESTclient(object):
 
     @request_handler
     def patch(self, endpoint, **kwargs):
-        """ helper method to submit delete requests
+        """ helper method to submit patch requests
         """
         return requests.patch(kwargs.pop('address'), **kwargs)
 

@@ -109,12 +109,41 @@ class TestRESTclient(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     @patch('rest3client.restclient.os.access')
+    @patch('rest3client.restclient.redact')
+    @patch('rest3client.restclient.logger')
+    def test__log_request_Should_CallLogger_When_JsonNotSerializable(self, logger_patch, redact_patch, *patches):
+        redact_patch.return_value = '--redacted-arguments--'
+        client = RESTclient('hostname1.company.com', bearer_token='token')
+        arguments = {
+            'address': '--address--',
+            'data': Mock()
+        }
+        client.log_request('GET', arguments, True)
+        debug_call = call('\nGET: --address-- NOOP: True\n"--redacted-arguments--"')
+        self.assertTrue(debug_call in logger_patch.debug.mock_calls)
+
+    @patch('rest3client.restclient.os.access')
+    @patch('rest3client.restclient.redact')
+    @patch('rest3client.restclient.logger')
+    def test__log_request_Should_CallLogger_When_JsonSerializable(self, logger_patch, redact_patch, *patches):
+        arguments = {
+            'address': '--address--',
+            'data': 'data'
+        }
+        redact_patch.return_value = arguments
+        client = RESTclient('hostname1.company.com', bearer_token='token')
+
+        client.log_request('GET', arguments, True)
+        debug_call = call('\nGET: --address-- NOOP: True\n{\n  "address": "--address--",\n  "data": "data"\n}')
+        self.assertTrue(debug_call in logger_patch.debug.mock_calls)
+
+    @patch('rest3client.restclient.os.access')
     def test__request_handler_Should_CallFunctionWithArgs_When_Args(self, *patches):
         mock_function = Mock(__name__='mocked method')
         client = RESTclient('hostname1.company.com')
         decorated_function = RESTclient.request_handler(mock_function)
-        decorated_function(client, '/rest/endpoint', 'arg1', 'arg2')
-        expected_args = (client, '/rest/endpoint', 'arg1', 'arg2')
+        decorated_function(client, '/rest/endpoint', k1='arg1', k2='arg2')
+        expected_args = (client, '/rest/endpoint')
         args, _ = mock_function.call_args_list[0]
         self.assertEqual(args, expected_args)
 
@@ -162,11 +191,11 @@ class TestRESTclient(unittest.TestCase):
 
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.RESTclient.get_headers', return_value={'h1': 'v1'})
-    def test__get_standard_kwargs_Should_SetHeaders_When_NoHeadersSpecified(self, *patches):
+    def test__get_arguments_Should_SetHeaders_When_NoHeadersSpecified(self, *patches):
         client = RESTclient('hostname1.company.com')
-        args = ['/endpoint']
+        endpoint = '/endpoint'
         kwargs = {}
-        result = client.process_arguments(args, kwargs)
+        result = client.get_arguments(endpoint, kwargs)
         expected_result = {
             'h1': 'v1'
         }
@@ -174,15 +203,15 @@ class TestRESTclient(unittest.TestCase):
 
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.RESTclient.get_headers', return_value={'h1': 'v1'})
-    def test__get_standard_kwargs_Should_UpdatedHeaders_When_HeadersSpecified(self, *patches):
+    def test__get_arguments_Should_UpdatedHeaders_When_HeadersSpecified(self, *patches):
         client = RESTclient('hostname1.company.com')
-        args = ['/endpoint']
+        endpoint = '/endpoint'
         kwargs = {
             'headers': {
                 'h2': 'v2'
             }
         }
-        result = client.process_arguments(args, kwargs)
+        result = client.get_arguments(endpoint, kwargs)
         expected_result = {
             'h1': 'v1',
             'h2': 'v2'
@@ -191,42 +220,42 @@ class TestRESTclient(unittest.TestCase):
 
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.RESTclient.get_headers', return_value={'h1': 'v1'})
-    def test__get_standard_kwargs_Should_SetVerifyToCabundle_When_VerifyNotSpecified(self, *patches):
+    def test__get_arguments_Should_SetVerifyToCabundle_When_VerifyNotSpecified(self, *patches):
         client = RESTclient('hostname1.company.com')
-        args = ['/endpoint']
+        endpoint = '/endpoint'
         kwargs = {}
-        result = client.process_arguments(args, kwargs)
+        result = client.get_arguments(endpoint, kwargs)
         self.assertEqual(result['verify'], client.cabundle)
 
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.RESTclient.get_headers', return_value={'h1': 'v1'})
-    def test__get_standard_kwargs_Should_SetVerifyToCabundle_When_VerifyIsNone(self, *patches):
+    def test__get_arguments_Should_SetVerifyToCabundle_When_VerifyIsNone(self, *patches):
         client = RESTclient('hostname1.company.com')
-        args = ['/endpoint']
+        endpoint = '/endpoint'
         kwargs = {
             'verify': None
         }
-        result = client.process_arguments(args, kwargs)
+        result = client.get_arguments(endpoint, kwargs)
         self.assertEqual(result['verify'], client.cabundle)
 
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.RESTclient.get_headers', return_value={'h1': 'v1'})
-    def test__get_standard_kwargs_Should_NotSetVerify_When_VerifyIsSet(self, *patches):
+    def test__get_arguments_Should_NotSetVerify_When_VerifyIsSet(self, *patches):
         client = RESTclient('hostname1.company.com')
-        args = ['/endpoint']
+        endpoint = '/endpoint'
         kwargs = {
             'verify': False
         }
-        result = client.process_arguments(args, kwargs)
+        result = client.get_arguments(endpoint, kwargs)
         self.assertFalse(result['verify'])
 
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.RESTclient.get_headers', return_value={'h1': 'v1'})
-    def test__get_standard_kwargs_Should_SetAddress_When_Called(self, *patches):
+    def test__get_arguments_Should_SetAddress_When_Called(self, *patches):
         client = RESTclient('hostname1.company.com')
-        args = ['/endpoint']
+        endpoint = '/endpoint'
         kwargs = {}
-        result = client.process_arguments(args, kwargs)
+        result = client.get_arguments(endpoint, kwargs)
         expected_result = 'https://hostname1.company.com/endpoint'
         self.assertEqual(result['address'], expected_result)
 
