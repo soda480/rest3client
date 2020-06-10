@@ -400,7 +400,7 @@ class TestRESTclient(unittest.TestCase):
             'address': 'Address',
             'verify': 'verify'
         }
-        result = redact(headers)
+        result = redact(headers, ['Authorization'])
         expected_result = {
             'headers': {
                 'Content-Type': 'application/json',
@@ -419,7 +419,7 @@ class TestRESTclient(unittest.TestCase):
             'address': 'Address',
             'verify': 'verify'
         }
-        result = redact(headers)
+        result = redact(headers, ['Auth'])
         expected_result = {
             'headers': {
                 'Content-Type': 'application/json',
@@ -438,7 +438,7 @@ class TestRESTclient(unittest.TestCase):
             'address': 'Address',
             'verify': 'verify'
         }
-        result = redact(headers)
+        result = redact(headers, ['x-api-key'])
         expected_result = {
             'headers': {
                 'Content-Type': 'application/json',
@@ -461,7 +461,7 @@ class TestRESTclient(unittest.TestCase):
                 'password': 'some password'
             }
         }
-        result = redact(headers)
+        result = redact(headers, ['Auth', 'password'])
         expected_result = {
             'headers': {
                 'Content-Type': 'application/json',
@@ -488,7 +488,7 @@ class TestRESTclient(unittest.TestCase):
                 'Password': 'some password'
             }
         }
-        result = redact(headers)
+        result = redact(headers, ['Auth', 'Password'])
         expected_result = {
             'headers': {
                 'Content-Type': 'application/json',
@@ -499,6 +499,43 @@ class TestRESTclient(unittest.TestCase):
                 'userName': 'some user',
                 'Password': '[REDACTED]'
             }
+        }
+        self.assertEqual(result, expected_result)
+
+    def test__redact_Should_Redact_When_List(self, *patches):
+        headers = {
+            'headers': {
+                'Content-Type': 'application/json',
+                'Auth': 'SessionToken'
+            },
+            'address': 'Address',
+            'verify': 'verify',
+            'json': [
+                {
+                    'userName': 'some user1',
+                    'Password': 'some password'
+                }, {
+                    'userName': 'some user2',
+                    'Password': 'some password'
+                }
+            ]
+        }
+        result = redact(headers, ['Auth', 'Password'])
+        expected_result = {
+            'headers': {
+                'Content-Type': 'application/json',
+                'Auth': '[REDACTED]'
+            },
+            'verify': 'verify',
+            'json': [
+                {
+                    'userName': 'some user1',
+                    'Password': '[REDACTED]'
+                }, {
+                    'userName': 'some user2',
+                    'Password': '[REDACTED]'
+                }
+            ]
         }
         self.assertEqual(result, expected_result)
 
