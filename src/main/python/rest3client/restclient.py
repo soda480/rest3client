@@ -17,6 +17,7 @@ import os
 import json
 import base64
 import requests
+from collections import Iterable
 from requests.packages.urllib3.exceptions import InsecurePlatformWarning
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
@@ -31,35 +32,40 @@ requests.packages.urllib3.disable_warnings(InsecurePlatformWarning)
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 
-def redact(kwargs):
-    """ return redacted copy of dictionary
+def redact(items, items_to_redact):
+    """ return redacted copy of items dictionary
     """
-    scrubbed = copy.deepcopy(kwargs)
-    if 'headers' in scrubbed:
-        if 'Authorization' in scrubbed['headers']:
-            scrubbed['headers']['Authorization'] = '[REDACTED]'
+    def _redact(items):
+        """ redact private method
+        """
+        if isinstance(items, dict):
+            for item_to_redact in items_to_redact:
+                if item_to_redact in items:
+                    items[item_to_redact] = '[REDACTED]'
+            for item in items.values():
+                _redact(item)
+        elif isinstance(items, Iterable) and not isinstance(items, str):
+            for item in items:
+                _redact(item)
 
-        if 'Auth' in scrubbed['headers']:
-            scrubbed['headers']['Auth'] = '[REDACTED]'
-
-        if 'x-api-key' in scrubbed['headers']:
-            scrubbed['headers']['x-api-key'] = '[REDACTED]'
-
+    scrubbed = copy.deepcopy(items)
     if 'address' in scrubbed:
         del scrubbed['address']
-
-    if 'json' in scrubbed:
-        if 'password' in scrubbed['json']:
-            scrubbed['json']['password'] = '[REDACTED]'
-        if 'Password' in scrubbed['json']:
-            scrubbed['json']['Password'] = '[REDACTED]'
-
+    for value in scrubbed.values():
+        _redact(value)
     return scrubbed
 
 
 class RESTclient(object):
 
     cabundle = '/etc/ssl/certs/ca-certificates.crt'
+    items_to_redact = [
+        'Authorization',
+        'Auth',
+        'x-api-key',
+        'Password',
+        'password'
+    ]
 
     def __init__(self, hostname, username=None, password=None, api_key=None, bearer_token=None, cabundle=None):
         """ class constructor
@@ -124,7 +130,7 @@ class RESTclient(object):
     def log_request(self, function_name, arguments, noop):
         """ log request function name and redacted arguments
         """
-        redacted_arguments = redact(arguments)
+        redacted_arguments = redact(arguments, self.items_to_redact)
         try:
             redacted_arguments = json.dumps(redacted_arguments, indent=2, sort_keys=True)
         except TypeError:
