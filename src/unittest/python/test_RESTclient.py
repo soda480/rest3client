@@ -27,8 +27,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 consoleHandler = logging.StreamHandler(sys.stdout)
-logFormatter = logging.Formatter(
-    "%(asctime)s %(threadName)s %(name)s [%(funcName)s] %(levelname)s %(message)s")
+logFormatter = logging.Formatter("%(asctime)s %(threadName)s %(name)s [%(funcName)s] %(levelname)s %(message)s")
 consoleHandler.setFormatter(logFormatter)
 rootLogger = logging.getLogger()
 rootLogger.addHandler(consoleHandler)
@@ -78,6 +77,14 @@ class TestRESTclient(unittest.TestCase):
         bearer_token = 'token'
         client = RESTclient(hostname, bearer_token=bearer_token, cabundle=cabundle)
         self.assertEqual(client.bearer_token, bearer_token)
+
+    @patch('rest3client.restclient.os.access', return_value=False)
+    @patch('rest3client.restclient.SSLAdapter')
+    def test__init__Should_SetAttributes_When_CertfileCertpass(self, ssl_adapter_patch, *patches):
+        client = RESTclient('hostname1.company.com', certfile='-certfile-', certpass='-certpass-')
+        self.assertEqual(client.certfile, '-certfile-')
+        ssl_adapter_patch.assert_called_once_with(certfile='-certfile-', certpass='-certpass-')
+        self.assertEqual(client.ssl_adapter, ssl_adapter_patch.return_value)
 
     @patch('rest3client.restclient.os.access')
     def test__get_headers_Should_ReturnHeaders_When_Called(self, *patches):
@@ -170,7 +177,7 @@ class TestRESTclient(unittest.TestCase):
         self.assertEqual(kwargs, expected_kwargs)
 
     @patch('rest3client.restclient.os.access')
-    @patch('rest3client.RESTclient.process_response', return_value='result')
+    @patch('rest3client.RESTclient.get_response', return_value='result')
     def test__request_handler_Should_CallFunctionAndReturnResult_When_FunctionDoesNotSetNoop(self, *patches):
         mock_function = Mock(__name__='mocked method')
         client = RESTclient('hostname1.company.com')
@@ -180,7 +187,7 @@ class TestRESTclient(unittest.TestCase):
         self.assertEqual(result, 'result')
 
     @patch('rest3client.restclient.os.access')
-    @patch('rest3client.RESTclient.process_response')
+    @patch('rest3client.RESTclient.get_response')
     def test__request_handler_Should_NotCallFunctionAndReturnNone_When_FunctionSetsNoop(self, *patches):
         mock_function = Mock(__name__='mocked method')
         client = RESTclient('hostname1.company.com')
@@ -188,6 +195,22 @@ class TestRESTclient(unittest.TestCase):
         result = decorated_function(client, '/rest/endpoint', noop=True)
         self.assertIsNone(result)
         self.assertFalse(mock_function.called)
+
+    @patch('rest3client.restclient.os.access')
+    @patch('rest3client.RESTclient.get_response', return_value='result')
+    @patch('rest3client.restclient.SSLAdapter')
+    @patch('rest3client.restclient.requests.Session')
+    def test__request_handler_Should_CallFunctionAndReturnResult_When_SslAdapter(self, session_patch, ssl_adapter_patch, *patches):
+        session_mock = Mock()
+        session_patch.return_value.__enter__.return_value = session_mock
+
+        mock_function = Mock(__name__='mocked method')
+        client = RESTclient('hostname1.company.com', certfile='-certfile-', certpass='-certpass-')
+        decorated_function = RESTclient.request_handler(mock_function)
+        result = decorated_function(client, '/rest/endpoint', key='value')
+        session_mock.mount.assert_called_once_with('https://hostname1.company.com', ssl_adapter_patch.return_value)
+        session_mock.request.assert_called_once_with('mocked method', 'https://hostname1.company.com/rest/endpoint', key='value', headers={'Content-Type': 'application/json'}, verify='/etc/ssl/certs/ca-certificates.crt')
+        self.assertEqual(result, 'result')
 
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.RESTclient.get_headers', return_value={'h1': 'v1'})
@@ -260,17 +283,17 @@ class TestRESTclient(unittest.TestCase):
         self.assertEqual(result['address'], expected_result)
 
     @patch('rest3client.restclient.os.access')
-    def test__process_response_Should_ReturnResponseJson_When_ResponseOk(self, *patches):
+    def test__get_response_Should_ReturnResponseJson_When_ResponseOk(self, *patches):
         mock_response = Mock(ok=True)
         mock_response.json.return_value = {
             'result': 'result'
         }
         client = RESTclient('hostname1.company.com')
-        result = client.process_response(mock_response)
+        result = client.get_response(mock_response)
         self.assertEqual(result, mock_response.json.return_value)
 
     @patch('rest3client.restclient.os.access')
-    def test__process_response_Should_CallResponseRaiseForStatus_When_ResponseNotOk(self, *patches):
+    def test__get_response_Should_CallResponseRaiseForStatus_When_ResponseNotOk(self, *patches):
         mock_response = Mock(ok=False)
         mock_response.json.return_value = {
             'message': 'error message',
@@ -281,13 +304,13 @@ class TestRESTclient(unittest.TestCase):
 
         client = RESTclient('hostname1.company.com')
         with self.assertRaises(Exception):
-            client.process_response(mock_response)
+            client.get_response(mock_response)
 
     @patch('rest3client.restclient.os.access')
-    def test__process_response_Should_ReturnRawResponse_When_RawResponse(self, *patches):
+    def test__get_response_Should_ReturnRawResponse_When_RawResponse(self, *patches):
         mock_response = Mock()
         client = RESTclient('hostname1.company.com')
-        result = client.process_response(mock_response, raw_response=True)
+        result = client.get_response(mock_response, raw_response=True)
         self.assertEqual(result, mock_response)
 
     @patch('rest3client.restclient.os.access')
@@ -359,7 +382,7 @@ class TestRESTclient(unittest.TestCase):
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.restclient.requests')
     def test__delete_Should_CallRequestsDelete_When_Called(self, requests, *patches):
-        client = RESTclient(hostname='hostname1.company.com')
+        client = RESTclient('hostname1.company.com')
         client.delete('/rest/endpoint')
         requests_delete_call = call(
             'https://hostname1.company.com/rest/endpoint',
@@ -382,13 +405,13 @@ class TestRESTclient(unittest.TestCase):
         self.assertTrue('Basic' in results['Authorization'])
 
     @patch('rest3client.restclient.os.access')
-    def test__process_response_Should_ReturnResponseText_When_ResponseJsonRaisesValueError(self, *patches):
+    def test__get_response_Should_ReturnResponseText_When_ResponseJsonRaisesValueError(self, *patches):
         mock_response = Mock(ok=True, text='response text')
         mock_response.json.side_effect = [
             ValueError('No JSON')
         ]
         client = RESTclient('hostname1.company.com')
-        result = client.process_response(mock_response)
+        result = client.get_response(mock_response)
         self.assertEqual(result, 'response text')
 
     def test__redact_Should_Redact_When_AuthorizationInHeaders(self, *patches):
@@ -541,7 +564,7 @@ class TestRESTclient(unittest.TestCase):
 
     @patch('rest3client.restclient.os.access')
     def test__get_error_message_Should_ReturnExpected_When_ResponseJson(self, *patches):
-        client = RESTclient(hostname='hostname1.company.com')
+        client = RESTclient('hostname1.company.com')
         response_mock = Mock()
         response_mock.json.return_value = 'json value'
         result = client.get_error_message(response_mock)
@@ -549,7 +572,7 @@ class TestRESTclient(unittest.TestCase):
 
     @patch('rest3client.restclient.os.access')
     def test__get_error_message_ShouldReturnExpected_When_ResponseJsonValueError(self, *patches):
-        client = RESTclient(hostname='hostname1.company.com')
+        client = RESTclient('hostname1.company.com')
         response_mock = Mock()
         response_mock.json.side_effect = ValueError()
         response_mock.text = 'text error'
