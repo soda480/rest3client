@@ -15,15 +15,17 @@
 
 import os
 import json
+import copy
+import time
+import logging
 import base64
 import requests
 from collections import Iterable
 from requests.packages.urllib3.exceptions import InsecurePlatformWarning
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
-import copy
-import time
-import logging
+from rest3client.ssladapter import SSLAdapter
+
 logger = logging.getLogger(__name__)
 
 logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(logging.CRITICAL)
@@ -67,7 +69,7 @@ class RESTclient(object):
         'password'
     ]
 
-    def __init__(self, hostname, username=None, password=None, api_key=None, bearer_token=None, cabundle=None):
+    def __init__(self, hostname, username=None, password=None, api_key=None, bearer_token=None, cabundle=None, certfile=None, certpass=None):
         """ class constructor
         """
         logger.debug('executing RESTclient constructor')
@@ -89,6 +91,11 @@ class RESTclient(object):
         if bearer_token:
             self.bearer_token = bearer_token
 
+        self.certfile = certfile
+        self.ssl_adapter = None
+        if certfile and certpass:
+            self.ssl_adapter = SSLAdapter(certfile=certfile, certpass=certpass)
+
     def get_headers(self, **kwargs):
         """ return headers to pass to requests method
         """
@@ -98,14 +105,14 @@ class RESTclient(object):
             headers['Content-Type'] = 'application/json'
 
         if hasattr(self, 'username') and hasattr(self, 'password'):
-            basic = base64.b64encode(('{}:{}'.format(self.username, self.password)).encode())
-            headers['Authorization'] = 'Basic {}'.format(basic).replace('b\'', '').replace('\'', '')
+            basic = base64.b64encode((f'{self.username}:{self.password}').encode())
+            headers['Authorization'] = f'Basic {basic}'.replace('b\'', '').replace('\'', '')
 
         if hasattr(self, 'api_key'):
             headers['x-api-key'] = self.api_key
 
         if hasattr(self, 'bearer_token'):
-            headers['Authorization'] = 'Bearer {}'.format(self.bearer_token)
+            headers['Authorization'] = f'Bearer {self.bearer_token}'
 
         return headers
 
@@ -123,7 +130,7 @@ class RESTclient(object):
         if 'verify' not in arguments or arguments.get('verify') is None:
             arguments['verify'] = self.cabundle
 
-        arguments['address'] = 'https://{}{}'.format(self.hostname, endpoint)
+        arguments['address'] = f'https://{self.hostname}{endpoint}'
         arguments.pop('raw_response', None)
         return arguments
 
@@ -136,8 +143,8 @@ class RESTclient(object):
         except TypeError:
             pass
 
-        logger.debug('\n{}: {} NOOP: {}\n{}'.format(
-            function_name, arguments['address'], noop, redacted_arguments))
+        cert = f'\nCERT: {self.certfile}' if self.certfile else ''
+        logger.debug(f"\n{function_name}: {arguments['address']} NOOP: {noop}\n{redacted_arguments}{cert}")
 
     def get_error_message(self, response):
         """ return error message from response
@@ -152,8 +159,8 @@ class RESTclient(object):
             logger.debug('returning error from response text')
             return response.text
 
-    def process_response(self, response, **kwargs):
-        """ process request response
+    def get_response(self, response, **kwargs):
+        """ return request response
         """
         logger.debug('processing response')
         raw_response = kwargs.get('raw_response', False)
@@ -164,7 +171,7 @@ class RESTclient(object):
         if not response.ok:
             logger.debug('response was not OK')
             error_message = self.get_error_message(response)
-            logger.error('{}: {}'.format(error_message, response.status_code))
+            logger.error(f'{error_message}: {response.status_code}')
             response.raise_for_status()
 
         logger.debug('response was OK')
@@ -188,8 +195,13 @@ class RESTclient(object):
             self.log_request(function.__name__.upper(), arguments, noop)
             if noop:
                 return
-            response = function(self, endpoint, **arguments)
-            return self.process_response(response, **kwargs)
+            if self.ssl_adapter:
+                with requests.Session() as session:
+                    session.mount(f'https://{self.hostname}', self.ssl_adapter)
+                    response = session.request(function.__name__, arguments.pop('address'), **arguments)
+            else:
+                response = function(self, endpoint, **arguments)
+            return self.get_response(response, **kwargs)
 
         return _request_handler
 
