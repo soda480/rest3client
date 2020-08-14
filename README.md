@@ -62,7 +62,8 @@ Build the Docker image:
 docker image build \
 --build-arg http_proxy \
 --build-arg https_proxy \
--t rest3client:latest .
+-t \
+rest3client:latest .
 ```
 
 Run the Docker container:
