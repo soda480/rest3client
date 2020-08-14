@@ -7,11 +7,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-16.04
+    container: python:3.6-alpine
     steps:
     - uses: actions/checkout@v2
-
-    - name: Upgrade pip
-      run: pip install --upgrade pip
 
     - name: Install pybuilder
       run: pip install pybuilder==0.11.17
