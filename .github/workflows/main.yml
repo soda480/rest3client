@@ -1,0 +1,20 @@
+name: CI
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+jobs:
+  build:
+    runs-on: python:3.6-alpine
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install pybuilder
+      run: pip install pybuilder==0.11.17
+
+    - name: Install dependencies
+      run: pyb install_dependencies
+
+    - name: Execute build
+      run: pyb -X
