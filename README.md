@@ -1,3 +1,5 @@
+![Build](https://github.com/soda480/rest3client/workflows/CI/badge.svg)
+
 # rest3client #
 
 rest3client is a requests-based library providing simple methods to enable consumption of HTTP REST APIs.
