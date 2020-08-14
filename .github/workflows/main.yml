@@ -6,7 +6,8 @@ on:
     branches: [ master ]
 jobs:
   build:
-    runs-on: python:3.6-alpine
+    runs-on: ubuntu-16.04
+    container: python:3.6-alpine
     steps:
     - uses: actions/checkout@v2
 
