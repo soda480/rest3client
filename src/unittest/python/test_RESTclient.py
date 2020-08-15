@@ -433,6 +433,15 @@ class TestRESTclient(unittest.TestCase):
         }
         self.assertEqual(result, expected_result)
 
+    def test__redact_Should_Redact_When_Address(self, *patches):
+        headers = {
+            'address': 'Address'
+        }
+        result = redact(headers, [])
+        expected_result = {
+        }
+        self.assertEqual(result, expected_result)
+
     def test__redact_Should_Redact_When_AuthInHeaders(self, *patches):
         headers = {
             'headers': {

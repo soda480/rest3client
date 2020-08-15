@@ -16,22 +16,16 @@
 import os
 import json
 import copy
-import time
 import logging
 import base64
 import requests
-from collections import Iterable
-from requests.packages.urllib3.exceptions import InsecurePlatformWarning
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from collections.abc import Iterable
 
 from rest3client.ssladapter import SSLAdapter
 
 logger = logging.getLogger(__name__)
 
 logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(logging.CRITICAL)
-
-requests.packages.urllib3.disable_warnings(InsecurePlatformWarning)
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 
 def redact(items, items_to_redact):
@@ -58,7 +52,9 @@ def redact(items, items_to_redact):
     return scrubbed
 
 
-class RESTclient(object):
+class RESTclient():
+    """ class exposing abstracted requests-based http verb apis
+    """
 
     cabundle = '/etc/ssl/certs/ca-certificates.crt'
     items_to_redact = [
