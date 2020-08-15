@@ -1,5 +1,7 @@
 [![GitHub Workflow Status](https://github.com/soda480/rest3client/workflows/build/badge.svg)](https://github.com/soda480/rest3client/actions)
-[![codecov](https://codecov.io/gh/soda480/rest3client/branch/master/graph/badge.svg)](https://codecov.io/gh/soda480/rest3client)
+[![Code Coverage](https://codecov.io/gh/soda480/rest3client/branch/master/graph/badge.svg)](https://codecov.io/gh/soda480/rest3client)
+[![Code Quality Score](https://www.code-inspector.com/project/12271/score/svg)](https://frontend.code-inspector.com/project/12271/dashboard)
+[![Code Grade](https://www.code-inspector.com/project/12271/status/svg)](https://frontend.code-inspector.com/project/12271/dashboard)
 [![PyPI version](https://badge.fury.io/py/rest3client.svg)](https://badge.fury.io/py/rest3client)
 
 # rest3client #
