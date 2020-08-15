@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 class SSLAdapter(requests.adapters.HTTPAdapter):
+    """ SSLAdapter class to provide SSL context for requests
+    """
 
     def __init__(self, *args, **kwargs):
         certfile = kwargs.pop('certfile')
