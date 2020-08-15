@@ -1,4 +1,6 @@
-![Build](https://github.com/soda480/rest3client/workflows/CI/badge.svg)
+[![GitHub Workflow Status](https://github.com/soda480/rest3client/workflows/build/badge.svg)](https://github.com/soda480/rest3client/actions)
+[![codecov](https://codecov.io/gh/soda480/rest3client/branch/master/graph/badge.svg)](https://codecov.io/gh/soda480/rest3client)
+[![PyPI version](https://badge.fury.io/py/rest3client.svg)](https://badge.fury.io/py/rest3client)
 
 # rest3client #
 
