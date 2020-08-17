@@ -98,9 +98,9 @@ class TestRESTclient(unittest.TestCase):
     @patch('rest3client.restclient.os.access')
     def test__get_headers_Should_ReturnHeaders_When_ApiKey(self, *patches):
         client = RESTclient('hostname1.company.com', api_key='some-api-key')
-        result = client.get_headers()
+        result = client.get_headers(headers={'Content-Type': 'application/xml'})
         expected_result = {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/xml',
             'x-api-key': 'some-api-key'
         }
         self.assertEqual(result, expected_result)
@@ -420,7 +420,6 @@ class TestRESTclient(unittest.TestCase):
                 'Content-Type': 'application/json',
                 'Authorization': 'Basic abcdefghijklmnopqrstuvwxyz'
             },
-            'address': 'Address',
             'verify': 'verify'
         }
         result = redact(headers, ['Authorization'])
