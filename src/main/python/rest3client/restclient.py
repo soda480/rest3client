@@ -22,34 +22,11 @@ import requests
 from collections.abc import Iterable
 
 from rest3client.ssladapter import SSLAdapter
+from retrying import retry
 
 logger = logging.getLogger(__name__)
 
 logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(logging.CRITICAL)
-
-
-def redact(items, items_to_redact):
-    """ return redacted copy of items dictionary
-    """
-    def _redact(items):
-        """ redact private method
-        """
-        if isinstance(items, dict):
-            for item_to_redact in items_to_redact:
-                if item_to_redact in items:
-                    items[item_to_redact] = '[REDACTED]'
-            for item in items.values():
-                _redact(item)
-        elif isinstance(items, Iterable) and not isinstance(items, str):
-            for item in items:
-                _redact(item)
-
-    scrubbed = copy.deepcopy(items)
-    if 'address' in scrubbed:
-        del scrubbed['address']
-    for value in scrubbed.values():
-        _redact(value)
-    return scrubbed
 
 
 class RESTclient():
@@ -65,32 +42,44 @@ class RESTclient():
         'password'
     ]
 
-    def __init__(self, hostname, username=None, password=None, api_key=None, bearer_token=None, cabundle=None, certfile=None, certpass=None):
+    def __init__(self, hostname, **kwargs):
         """ class constructor
         """
         logger.debug('executing RESTclient constructor')
         self.hostname = hostname
 
+        cabundle = kwargs.get('cabundle')
         if not cabundle:
             cabundle = RESTclient.cabundle
         self.cabundle = cabundle if os.access(cabundle, os.R_OK) else False
 
+        username = kwargs.get('username')
         if username:
             self.username = username
 
+        password = kwargs.get('password')
         if password:
             self.password = password
 
+        api_key = kwargs.get('api_key')
         if api_key:
             self.api_key = api_key
 
+        bearer_token = kwargs.get('bearer_token')
         if bearer_token:
             self.bearer_token = bearer_token
 
+        certfile = kwargs.get('certfile')
+        certpass = kwargs.get('certpass')
         self.certfile = certfile
         self.ssl_adapter = None
         if certfile and certpass:
             self.ssl_adapter = SSLAdapter(certfile=certfile, certpass=certpass)
+
+        retries = kwargs.get('retries')
+        if retries:
+            self.decorate_retry(retries)
+            self.retries = retries
 
     def get_headers(self, **kwargs):
         """ return headers to pass to requests method
@@ -133,7 +122,7 @@ class RESTclient():
     def log_request(self, function_name, arguments, noop):
         """ log request function name and redacted arguments
         """
-        redacted_arguments = redact(arguments, self.items_to_redact)
+        redacted_arguments = RESTclient.redact(arguments, self.items_to_redact)
         try:
             redacted_arguments = json.dumps(redacted_arguments, indent=2, sort_keys=True)
         except TypeError:
@@ -159,10 +148,6 @@ class RESTclient():
         """ return request response
         """
         logger.debug('processing response')
-        raw_response = kwargs.get('raw_response', False)
-        if raw_response:
-            logger.debug('returning raw response')
-            return response
 
         if not response.ok:
             logger.debug('response was not OK')
@@ -171,6 +156,12 @@ class RESTclient():
             response.raise_for_status()
 
         logger.debug('response was OK')
+
+        raw_response = kwargs.get('raw_response', False)
+        if raw_response:
+            logger.debug('returning raw response')
+            return response
+
         try:
             response_json = response.json()
             logger.debug('returning response json')
@@ -230,5 +221,51 @@ class RESTclient():
         """ helper method to submit patch requests
         """
         return requests.patch(kwargs.pop('address'), **kwargs)
+
+    def decorate_retry(self, retries):
+        """ decorate request methods with retry decorator where kwargs specified in retries list
+            retry kwargs must conform to prescribed retry arguments, see: https://pypi.org/project/retrying/
+        """
+        logger.debug('decorating request methods with retry')
+        for retry_kwargs in retries:
+            RESTclient.log_retry_kwargs(retry_kwargs)
+            self.get = retry(**retry_kwargs)(self.get)
+            self.post = retry(**retry_kwargs)(self.post)
+            self.put = retry(**retry_kwargs)(self.put)
+            self.delete = retry(**retry_kwargs)(self.delete)
+            self.patch = retry(**retry_kwargs)(self.patch)
+
+    @classmethod
+    def redact(cls, items, items_to_redact):
+        """ return redacted copy of items dictionary
+        """
+        def _redact(items):
+            """ redact private method
+            """
+            if isinstance(items, dict):
+                for item_to_redact in items_to_redact:
+                    if item_to_redact in items:
+                        items[item_to_redact] = '[REDACTED]'
+                for item in items.values():
+                    _redact(item)
+            elif isinstance(items, Iterable) and not isinstance(items, str):
+                for item in items:
+                    _redact(item)
+
+        scrubbed = copy.deepcopy(items)
+        if 'address' in scrubbed:
+            del scrubbed['address']
+        for value in scrubbed.values():
+            _redact(value)
+        return scrubbed
+
+    @classmethod
+    def log_retry_kwargs(cls, kwargs):
+        """ log retry kwargs parameters
+        """
+        for key, value in kwargs.items():
+            if callable(value):
+                value = value.__name__
+            logger.debug(f'{key}={value}')
 
     request_handler = staticmethod(request_handler)

@@ -17,7 +17,7 @@
 rest3client is a requests-based library providing simple methods to enable consumption of HTTP REST APIs.
 
 The library further abstracts the underlying requests calls providing HTTP verb equivalent methods for GET, POST, PATCH, PUT and DELETE. The library includes a RESTclient class that implements a consistent approach for processing request responses, extracting error messages from responses, and providing standard headers to request calls. Enabling the consumer to focus on their business logic and less on the complexites of setting up and processing the requests repsonses.
-A subclass inheriting RESTclient can override the base methods providing further customization and flexibility. The library supports most popular authentication schemes; including no-auth, basic auth, api-key and token-based.
+A subclass inheriting RESTclient can override the base methods providing further customization and flexibility. The library supports most popular authentication schemes; including no-auth, basic auth, api-key auth, token-based auth and certificate-based auth.
 """
 
 from pybuilder.core import use_plugin
@@ -40,7 +40,7 @@ authors = [
 ]
 summary = 'A Python class providing primitive methods for enabling consumption of REST APIs'
 url = 'https://github.com/soda480/rest3client'
-version = '0.0.6'
+version = '0.0.7'
 default_task = [
     'clean',
     'analyze',
