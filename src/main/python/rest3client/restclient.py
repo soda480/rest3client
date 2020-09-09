@@ -115,7 +115,10 @@ class RESTclient():
         if 'verify' not in arguments or arguments.get('verify') is None:
             arguments['verify'] = self.cabundle
 
-        arguments['address'] = f'https://{self.hostname}{endpoint}'
+        if endpoint.startswith('http'):
+            arguments['address'] = endpoint
+        else:
+            arguments['address'] = f'https://{self.hostname}{endpoint}'
         arguments.pop('raw_response', None)
         return arguments
 

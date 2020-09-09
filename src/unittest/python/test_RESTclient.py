@@ -282,12 +282,22 @@ class TestRESTclient(unittest.TestCase):
 
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.RESTclient.get_headers', return_value={'h1': 'v1'})
-    def test__get_arguments_Should_SetAddress_When_Called(self, *patches):
+    def test__get_arguments_Should_SetAddress_When_Endpoint(self, *patches):
         client = RESTclient('api.name.com')
         endpoint = '/endpoint'
         kwargs = {}
         result = client.get_arguments(endpoint, kwargs)
         expected_result = 'https://api.name.com/endpoint'
+        self.assertEqual(result['address'], expected_result)
+
+    @patch('rest3client.restclient.os.access')
+    @patch('rest3client.RESTclient.get_headers', return_value={'h1': 'v1'})
+    def test__get_arguments_Should_SetAddress_When_HttpAddress(self, *patches):
+        client = RESTclient('api.name.com')
+        endpoint = 'https://upload.api.com/endpoint'
+        kwargs = {}
+        result = client.get_arguments(endpoint, kwargs)
+        expected_result = 'https://upload.api.com/endpoint'
         self.assertEqual(result['address'], expected_result)
 
     @patch('rest3client.restclient.os.access')
