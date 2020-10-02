@@ -155,7 +155,7 @@ class RESTclient():
         if not response.ok:
             logger.debug('response was not OK')
             error_message = self.get_error_message(response)
-            logger.error(f'{error_message}: {response.status_code}')
+            logger.debug(f'{error_message}: {response.status_code}')
             response.raise_for_status()
 
         logger.debug('response was OK')
