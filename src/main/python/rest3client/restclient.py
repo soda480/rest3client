@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+import re
 import json
 import copy
 import logging
@@ -76,7 +77,8 @@ class RESTclient():
         if certfile and certpass:
             self.ssl_adapter = SSLAdapter(certfile=certfile, certpass=certpass)
 
-        retries = kwargs.get('retries')
+        retries = kwargs.get('retries', [])
+        self.get_retries(retries)
         if retries:
             self.decorate_retry(retries)
             self.retries = retries
@@ -125,7 +127,7 @@ class RESTclient():
     def log_request(self, function_name, arguments, noop):
         """ log request function name and redacted arguments
         """
-        redacted_arguments = RESTclient.redact(arguments, self.items_to_redact)
+        redacted_arguments = self.redact(arguments)
         try:
             redacted_arguments = json.dumps(redacted_arguments, indent=2, sort_keys=True)
         except TypeError:
@@ -225,6 +227,60 @@ class RESTclient():
         """
         return requests.patch(kwargs.pop('address'), **kwargs)
 
+    def get_retry_methods(self):
+        """ return list of all retry_ methods found in self
+        """
+        return [
+            item
+                for item in dir(self)
+                     if callable(getattr(self, item)) and item.startswith('retry_')
+        ]
+
+    @staticmethod
+    def get_retry_kwargs(doc):
+        """ return retry kwargs found in doc
+        """
+        regex = r'^.*retry:(?P<kwargs>.*)$'
+        match = re.match(regex, doc, re.DOTALL)
+        if match:
+            return match.group('kwargs').strip()
+
+    @staticmethod
+    def convert_numeric(data):
+        """ convert data dictionary values to numbers if numeric
+        """
+        for key, value in data.items():
+            if isinstance(value, str) and value.isnumeric():
+                data[key] = int(value)
+
+    @staticmethod
+    def get_retry_metadata(method, method_help):
+        """ return retry metadata found in method help
+        """
+        kwargs = RESTclient.get_retry_kwargs(method_help)
+        if not kwargs:
+            return
+        metadata = dict(kwarg.split(':') for kwarg in kwargs.split() if ':' in kwarg)
+        if not metadata:
+            metadata = {}
+        RESTclient.convert_numeric(metadata)
+        metadata['retry_on_exception'] = method
+        return metadata
+
+    def get_retries(self, retries):
+        """ return list of all retry methods with metadata found in self
+        """
+        retry_methods = self.get_retry_methods()
+        for retry_method in retry_methods:
+            method = getattr(self, retry_method)
+            method_help = method.__doc__
+            if not method_help:
+                continue
+            retry_metadata = RESTclient.get_retry_metadata(method, method_help)
+            if not retry_metadata:
+                continue
+            retries.append(retry_metadata)
+
     def decorate_retry(self, retries):
         """ decorate request methods with retry decorator where kwargs specified in retries list
             retry kwargs must conform to prescribed retry arguments, see: https://pypi.org/project/retrying/
@@ -239,14 +295,14 @@ class RESTclient():
             self.patch = retry(**retry_kwargs)(self.patch)
 
     @classmethod
-    def redact(cls, items, items_to_redact):
+    def redact(cls, items):
         """ return redacted copy of items dictionary
         """
         def _redact(items):
             """ redact private method
             """
             if isinstance(items, dict):
-                for item_to_redact in items_to_redact:
+                for item_to_redact in cls.items_to_redact:
                     if item_to_redact in items:
                         items[item_to_redact] = '[REDACTED]'
                 for item in items.values():
@@ -262,8 +318,8 @@ class RESTclient():
             _redact(value)
         return scrubbed
 
-    @classmethod
-    def log_retry_kwargs(cls, kwargs):
+    @staticmethod
+    def log_retry_kwargs(kwargs):
         """ log retry kwargs parameters
         """
         for key, value in kwargs.items():
