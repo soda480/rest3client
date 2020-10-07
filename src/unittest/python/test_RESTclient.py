@@ -440,7 +440,7 @@ class TestRESTclient(unittest.TestCase):
             },
             'verify': 'verify'
         }
-        result = RESTclient.redact(headers, ['Authorization'])
+        result = RESTclient.redact(headers)
         expected_result = {
             'headers': {
                 'Content-Type': 'application/json',
@@ -454,7 +454,7 @@ class TestRESTclient(unittest.TestCase):
         headers = {
             'address': 'Address'
         }
-        result = RESTclient.redact(headers, [])
+        result = RESTclient.redact(headers)
         expected_result = {
         }
         self.assertEqual(result, expected_result)
@@ -468,7 +468,7 @@ class TestRESTclient(unittest.TestCase):
             'address': 'Address',
             'verify': 'verify'
         }
-        result = RESTclient.redact(headers, ['Auth'])
+        result = RESTclient.redact(headers)
         expected_result = {
             'headers': {
                 'Content-Type': 'application/json',
@@ -487,7 +487,7 @@ class TestRESTclient(unittest.TestCase):
             'address': 'Address',
             'verify': 'verify'
         }
-        result = RESTclient.redact(headers, ['x-api-key'])
+        result = RESTclient.redact(headers)
         expected_result = {
             'headers': {
                 'Content-Type': 'application/json',
@@ -510,7 +510,7 @@ class TestRESTclient(unittest.TestCase):
                 'password': 'some password'
             }
         }
-        result = RESTclient.redact(headers, ['Auth', 'password'])
+        result = RESTclient.redact(headers)
         expected_result = {
             'headers': {
                 'Content-Type': 'application/json',
@@ -537,7 +537,7 @@ class TestRESTclient(unittest.TestCase):
                 'Password': 'some password'
             }
         }
-        result = RESTclient.redact(headers, ['Auth', 'Password'])
+        result = RESTclient.redact(headers)
         expected_result = {
             'headers': {
                 'Content-Type': 'application/json',
@@ -569,7 +569,7 @@ class TestRESTclient(unittest.TestCase):
                 }
             ]
         }
-        result = RESTclient.redact(headers, ['Auth', 'Password'])
+        result = RESTclient.redact(headers)
         expected_result = {
             'headers': {
                 'Content-Type': 'application/json',
@@ -624,7 +624,7 @@ class TestRESTclient(unittest.TestCase):
         self.assertTrue(retry_delete_call, retry_patch.mock_calls)
 
     @patch('rest3client.restclient.logger')
-    def test_log_retry_kwargs_Should_CallExpected_When_Called(self, logger_patch, *patches):
+    def test__log_retry_kwargs_Should_CallExpected_When_Called(self, logger_patch, *patches):
         function_mock = Mock(__name__='function1')
         kwargs = {'key1': 'val1', 'function': function_mock}
         RESTclient.log_retry_kwargs(kwargs)
@@ -632,3 +632,122 @@ class TestRESTclient(unittest.TestCase):
         call2 = call('function=function1')
         self.assertTrue(call1 in logger_patch.debug.mock_calls)
         self.assertTrue(call2 in logger_patch.debug.mock_calls)
+
+    @patch('rest3client.RESTclient.retry_type2_error', create=True)
+    @patch('rest3client.RESTclient.retry_type1_error', create=True)
+    @patch('rest3client.RESTclient.get_retries', return_value=None)
+    def test__get_retry_methods_Should_ReturnExpected_When_Called(self, *patches):
+        client = RESTclient('api.name.com')
+        result = client.get_retry_methods()
+        expected_result = [
+            'retry_type1_error',
+            'retry_type2_error'
+        ]
+        self.assertEqual(result, expected_result)
+
+    def test__get_retry_kwargs_Should_ReturnExpected_When_Match(self, *patches):
+        doc = """ return True if exception is a type1 exception
+            retry:
+                wait_random_min:10000
+                wait_random_max:20000
+                stop_max_attempt_number:6
+        """
+        expected_result = """wait_random_min:10000
+                wait_random_max:20000
+                stop_max_attempt_number:6"""
+        result = RESTclient.get_retry_kwargs(doc)
+        self.assertEqual(result, expected_result)
+
+    def test__get_retry_kwargs_Should_ReturnNone_When_NoMatch(self, *patches):
+        doc = """ return True if exception is a type1 exception
+                wait_random_min:10000
+                wait_random_max:20000
+                stop_max_attempt_number:6
+        """
+        result = RESTclient.get_retry_kwargs(doc)
+        self.assertIsNone(result)
+
+    def test__convert_numeric_Should_DoExpected_When_Called(self, *patches):
+        data = {
+            'one':'1',
+            'two':'2',
+            'name':'name',
+            'bool':False
+        }
+        RESTclient.convert_numeric(data)
+        self.assertEqual(data['one'], 1)
+        self.assertEqual(data['two'], 2)
+        self.assertEqual(data['name'], 'name')
+        self.assertEqual(data['bool'], False)
+
+    @patch('rest3client.RESTclient.get_retry_kwargs')
+    def test__get_retry_metadata_Should_ReturnNone_When_NoKwargs(self, get_retry_kwargs_patch, *patches):
+        get_retry_kwargs_patch.return_value = None
+        mock_method = Mock()
+        method_help = """ return True if exception is a type1 exception
+            retry:
+                wait_random_min:10000
+                wait_random_max:20000
+                stop_max_attempt_number:6
+        """
+        result = RESTclient.get_retry_metadata(mock_method, method_help)
+        self.assertIsNone(result)
+
+    @patch('rest3client.RESTclient.get_retry_kwargs')
+    def test__get_retry_metadata_Should_ReturnNone_When_NoMetadata(self, get_retry_kwargs_patch, *patches):
+        get_retry_kwargs_patch.return_value = """
+
+        """
+        mock_method = Mock()
+        method_help = """ return True if exception is a type1 exception
+            retry:
+
+        """
+        result = RESTclient.get_retry_metadata(mock_method, method_help)
+        expected_result = {
+            'retry_on_exception': mock_method
+        }
+        self.assertEqual(result, expected_result)
+
+    @patch('rest3client.RESTclient.get_retry_kwargs')
+    def test__get_retry_metadata_Should_ReturnExpected_When_Called(self, get_retry_kwargs_patch, *patches):
+        get_retry_kwargs_patch.return_value = """wait_random_min:10000
+                wait_random_max:20000
+                stop_max_attempt_number:6"""
+        mock_method = Mock()
+        method_help = """ return True if exception is a type1 exception
+            retry:
+                wait_random_min:10000
+                wait_random_max:20000
+                stop_max_attempt_number:6
+        """
+        result = RESTclient.get_retry_metadata(mock_method, method_help)
+        expected_result = {
+            'wait_random_min': 10000,
+            'wait_random_max': 20000,
+            'stop_max_attempt_number': 6,
+            'retry_on_exception': mock_method
+        }
+        self.assertEqual(result, expected_result)
+
+    @patch('rest3client.RESTclient.retry_type4_error', create=True)
+    @patch('rest3client.RESTclient.retry_type3_error', create=True)
+    @patch('rest3client.RESTclient.retry_type2_error', create=True, __doc__=None)
+    @patch('rest3client.RESTclient.retry_type1_error', create=True)
+    @patch('rest3client.RESTclient.get_retry_metadata')
+    def test__get_retries_Should_ReturnExpected_When_Called(self, get_retry_metadata_patch, *patches):
+        get_retry_metadata_patch.side_effect = [
+            {'key': 'retry_type1_error_metadata'},
+            {'key': 'retry_type3_error_metadata'},
+            None
+        ]
+        retries = [
+            {'key': 'retry_type0_error_metadata'}
+        ]
+        client = RESTclient('api.name.com', retries=retries)
+        expected_retries = [
+            {'key': 'retry_type0_error_metadata'},
+            {'key': 'retry_type1_error_metadata'},
+            {'key': 'retry_type3_error_metadata'}
+        ]
+        self.assertEqual(client.retries, expected_retries)

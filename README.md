@@ -8,7 +8,8 @@
 rest3client is a requests-based library providing simple methods to enable consumption of HTTP REST APIs.
 
 The library further abstracts the underlying requests calls providing HTTP verb equivalent methods for GET, POST, PATCH, PUT and DELETE. The library includes a RESTclient class that implements a consistent approach for processing request responses, extracting error messages from responses, and providing standard headers to request calls. Enabling the consumer to focus on their business logic and less on the complexites of setting up and processing the requests repsonses.
-A subclass inheriting RESTclient can override the base methods providing further customization and flexibility.
+
+A subclass inheriting RESTclient can override the base methods providing further customization and flexibility including the ability to automatically retry on exceptions.
 
 ### Supported Authentication Schemes
 The library supports most popular authentication schemes:
@@ -62,13 +63,40 @@ Examples below show how RESTclient can be used to consume the GitHub REST API. H
 #### Retries
 Add support for retry using the `retrying` library: https://pypi.org/project/retrying/
 
-The following will decorate all request methods with the retry decorator using the given arguments - randomly wait 1 to 2 seconds between retries
+Instantiating RESTclient with a `retries` key word argument will decorate all request methods (`get`, `put`, `post`, `delete` and `patch`) with a retry decorator using the provided arguments - i.e. wait 2 seconds between retries and limit retry attempts to 3.
 ```python
->>> client = RESTclient('api.github.com', retries=[{'wait_random_min': 1000, 'wait_random_max': 2000}])
+>>> client = RESTclient('api.github.com', retries=[{'wait_fixed': 2000, 'stop_max_attempt_number': 3}])
+```
+Multiple retry specifications can be provided, however the arguments provided **must** adhere to the retrying specification.
+
+Specifying retries for specific exceptions in subclasses is simple. RESTclient will automatically discover all retry methods defined in subclasses and decorate all request methods accordingly. Arguments for the retry decorator must be provided in the docstring for the respective retry method. Retry methods must begin with `retry_`.
+
+
+For example:
+
+```python
+@staticmethod
+def retry_connection_error(exception):
+    """ return True if exception is ProxyError False otherwise
+         retry:
+            wait_random_min:10000
+            wait_random_max:20000
+            stop_max_attempt_number:6
+    """
+    if isinstance(exception, ProxyError):
+        return True
+    return False
 ```
 
+Adding the method above to a subclass of RESTclient will have the affect of decorating all the request methods with the following decorator:
+
+```python
+@retry(retry_on_exception=retry_connection_error, 'wait_random_min'=10000, 'wait_random_max'=20000, 'stop_max_attempt_number'=6)
+```
+
+
 #### Real Eamples
-See [GitHub3API](https://github.com/soda480/github3api) for an example of how RESTclient can be subclassed to provide further custom functionality for a specific REST API.
+See [GitHub3API](https://github.com/soda480/github3api) for an example of how RESTclient can be subclassed to provide further custom functionality for a specific REST API (including retry on exceptions). 
 
 ### Development ###
 
