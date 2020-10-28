@@ -14,10 +14,11 @@
 # limitations under the License.
 
 """
-rest3client is a requests-based library providing simple methods to enable consumption of HTTP REST APIs.
+rest3client is an abstraction of the HTTP requests library (https://pypi.org/project/requests/) providing a simpler interface to enable consumption of HTTP REST APIs.
 
-The library further abstracts the underlying requests calls providing HTTP verb equivalent methods for GET, POST, PATCH, PUT and DELETE. The library includes a RESTclient class that implements a consistent approach for processing request responses, extracting error messages from responses, and providing standard headers to request calls. Enabling the consumer to focus on their business logic and less on the complexites of setting up and processing the requests repsonses.
-A subclass inheriting RESTclient can override the base methods providing further customization and flexibility. The library supports most popular authentication schemes; including no-auth, basic auth, api-key auth, token-based auth and certificate-based auth.
+The library further abstracts the underlying requests methods providing HTTP verb equivalent methods for GET, POST, PATCH, PUT and DELETE. The library includes a RESTclient class that implements a consistent approach for processing request responses, extracting error messages from responses, providing standard headers to request methods, and enabling request resiliency through integration with the retrying library. The abstraction enables the consumer to focus on their business logic and less on the complexites of setting up requests and processing request responses.
+
+A subclass inheriting RESTclient can override the base methods providing further customization and flexibility including the ability to automatically retry on exceptions.
 """
 
 from pybuilder.core import use_plugin
@@ -40,7 +41,7 @@ authors = [
 ]
 summary = 'A Python class providing primitive methods for enabling consumption of REST APIs'
 url = 'https://github.com/soda480/rest3client'
-version = '0.0.10'
+version = '0.1.0'
 default_task = [
     'clean',
     'analyze',
@@ -64,6 +65,8 @@ def set_properties(project):
     project.get_property('filter_resources_glob').extend(['**/rest3client/*'])
     project.build_depends_on_requirements('requirements-build.txt')
     project.depends_on_requirements('requirements.txt')
+    project.set_property('distutils_console_scripts',
+        ['rest = rest3client.rest:main'])
     project.set_property('distutils_classifiers', [
         'Development Status :: 4 - Beta',
         'Environment :: Console',

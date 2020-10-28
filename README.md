@@ -5,11 +5,12 @@
 
 # rest3client #
 
-rest3client is a requests-based library providing simple methods to enable consumption of HTTP REST APIs.
+rest3client is an abstraction of the HTTP requests library (https://pypi.org/project/requests/) providing a simpler interface to enable consumption of HTTP REST APIs.
 
-The library further abstracts the underlying requests calls providing HTTP verb equivalent methods for GET, POST, PATCH, PUT and DELETE. The library includes a RESTclient class that implements a consistent approach for processing request responses, extracting error messages from responses, and providing standard headers to request calls. Enabling the consumer to focus on their business logic and less on the complexites of setting up and processing the requests repsonses.
+The library further abstracts the underlying HTTP requests methods providing equivalent methods for GET, POST, PATCH, PUT and DELETE. The library includes a RESTclient class that implements a consistent approach for processing request responses, extracting error messages from responses, providing standard headers to request methods, and enabling request resiliency through integration with the retrying library. The abstraction enables the consumer to focus on their business logic and less on the complexites of setting up requests and processing request responses.
 
 A subclass inheriting RESTclient can override the base methods providing further customization and flexibility including the ability to automatically retry on exceptions.
+
 
 ### Supported Authentication Schemes
 The library supports most popular authentication schemes:
@@ -24,39 +25,61 @@ The library supports most popular authentication schemes:
 pip install rest3client
 ```
 
-### Example Usage ###
-Examples below show how RESTclient can be used to consume the GitHub REST API. However RESTclient can be used to consume just about any REST API.
+### API Usage ###
+The examples below show how RESTclient can be used to consume the GitHub REST API. However RESTclient can be used to consume just about any REST API.
 
 ```python
 >>> from rest3client import RESTclient
+```
 
-# instantiate RESTclient - no authentication
+`RESTclient` Authentication
+```python
+# no authentication
 >>> client = RESTclient('api.github.com')
 
-# GET request - return json response
+# basic authentication
+>>> client = RESTclient('my-api.my-company.com', username='--my-user--', password='--my-password--')
+
+# token-based authentication
+>>> client = RESTclient('api.github.com', bearer_token='--my-token--')
+
+# certificate-based authentication
+>>> client = RESTclient('my-api.my-company.com', certfile='/path/to/my-certificate.pem', certpass='--my-certificate-password--')
+```
+
+`GET` request
+```python
+# return json response
 >>> client.get('/rate_limit')['resources']['core']
 {'limit': 60, 'remaining': 37, 'reset': 1588898701}
 
-# GET request - return raw resonse
+# return raw resonse
 >>> client.get('/rate_limit', raw_response=True)
 <Response [200]>
+```
 
-# instantiate RESTclient using bearer token authentication
->>> client = RESTclient('api.github.com', bearer_token='****************')
-
-# POST request
+`POST` request
+```python
 >>> client.post('/user/repos', json={'name': 'test-repo1'})['full_name']
 'soda480/test-repo1'
 
-# POST request
 >>> client.post('/repos/soda480/test-repo1/labels', json={'name': 'label1', 'color': '#006b75'})['url']
 'https://api.github.com/repos/soda480/test-repo1/labels/label1'
+```
 
-# PATCH request
+`PATCH` request
+```python
 >>> client.patch('/repos/soda480/test-repo1/labels/label1', json={'description': 'my label'})['url']
 'https://api.github.com/repos/soda480/test-repo1/labels/label1'
+```
 
-# DELETE request 
+`PUT` request
+```python
+>>> client.put(endpoint, data=None, json=None, **kwargs)
+```
+
+`DELETE` request
+```python
 >>> client.delete('/repos/soda480/test-repo1')
 ```
 
@@ -70,7 +93,6 @@ Instantiating RESTclient with a `retries` key word argument will decorate all re
 Multiple retry specifications can be provided, however the arguments provided **must** adhere to the retrying specification.
 
 Specifying retries for specific exceptions in subclasses is simple. RESTclient will automatically discover all retry methods defined in subclasses and decorate all request methods accordingly. Arguments for the retry decorator must be provided in the docstring for the respective retry method. Retry methods must begin with `retry_`.
-
 
 For example:
 
@@ -97,6 +119,79 @@ Adding the method above to a subclass of RESTclient will have the affect of deco
 
 #### Real Eamples
 See [GitHub3API](https://github.com/soda480/github3api) for an example of how RESTclient can be subclassed to provide further custom functionality for a specific REST API (including retry on exceptions). 
+
+### CLI Usage ###
+RESTclient comes packaged with a command line interace (CLI) that can be used to consume REST APIs using the RESTclient class. To consume the CLI simply build and run the Docker container as described below, except when building the image exclude the `--target build-image` argument.
+```bash
+usage: rest [-h] [--address ADDRESS] [--json JSON_DATA]
+            [--headers HEADERS_DATA] [--attributes ATTRIBUTES] [--debug]
+            [--raw]
+            method endpoint
+
+A CLI for rest3client
+
+positional arguments:
+  method                HTTP request method
+  endpoint              REST API endpoint
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --address ADDRESS     HTTP request web address
+  --json JSON_DATA      string representing JSON serializable object to send
+                        to HTTP request method
+  --headers HEADERS_DATA
+                        string representing headers dictionary to send to HTTP
+                        request method
+  --attributes ATTRIBUTES
+                        attributes in JSON response from HTTP request method
+                        to filter out
+  --debug               display debug messages to stdout
+  --raw                 return raw response from HTTP request method
+```
+
+Set environment variables prefixed with `R3C_`.
+
+To set the web address of the API:
+```bash
+export R3C_ADDRESS=my-api.my-company.com
+```
+
+For token-based authentication:
+```bash
+export R3C_BEARER_TOKEN=--my-token--
+```
+
+For basic authentication:
+```bash
+export R3C_USERNAME='--my-username--'
+export R3C_PASSWORD='--my-password--'
+```
+
+For certificate-based authentication:
+```bash
+export R3C_CERTFILE='/path/to/my-certificate.pem'
+export R3C_CERTPASS='--certificate-password--'
+```
+
+Some examples for how to execute the CLI to consume the GitHUB API:
+
+```bash
+rest POST /user/repos --json "{'name': 'test-repo1'}" --attributes "name, private, description, permissions"
+
+rest GET /user/repos --attributes "name, full_name, private, description, permissions"
+
+rest POST /repos/soda480/test-repo1/labels --json "{'name': 'label1', 'color': 'C7EFD5'}" --attributes url
+
+rest PATCH /repos/soda480/test-repo1/labels/label1 --json "{'description': 'my label'}" --attributes url
+
+rest DELETE /repos/soda480/test-repo1/labels/label1
+
+rest GET /repos/soda480/test-repo1/labels --attributes name
+
+rest DELETE /repos/soda480/test-repo1 --debug
+
+rest GET /rate_limit --raw
+```
 
 ### Development ###
 

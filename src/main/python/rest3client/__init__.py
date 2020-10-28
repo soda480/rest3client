@@ -15,3 +15,4 @@
 
 
 from .restclient import RESTclient
+from .restcli import RESTcli
