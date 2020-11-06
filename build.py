@@ -41,7 +41,7 @@ authors = [
 ]
 summary = 'A Python class providing primitive methods for enabling consumption of REST APIs'
 url = 'https://github.com/soda480/rest3client'
-version = '0.1.0'
+version = '0.1.2'
 default_task = [
     'clean',
     'analyze',

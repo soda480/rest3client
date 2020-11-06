@@ -1,8 +1,10 @@
 
+import re
 import sys
 import json
 import logging
 import argparse
+import requests
 from os import getenv
 from collections.abc import Iterable
 
@@ -35,10 +37,7 @@ class RESTcli():
         """
         parser = self.get_parser()
         self.args = parser.parse_args()
-
-        if self.args.debug:
-            logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-
+        self.configure_logging()
         client = self.get_client()
         response = self.execute_request(client)
         attributes = self.get_attributes()
@@ -84,7 +83,7 @@ class RESTcli():
             dest='attributes',
             type=str,
             required=False,
-            help='attributes in JSON response from HTTP request method to filter out')
+            help='attributes to filter from response - if used with --raw will filter from headers otherwise will filter from JSON response')
         parser.add_argument(
             '--debug',
             dest='debug',
@@ -95,10 +94,21 @@ class RESTcli():
             dest='raw_response',
             action='store_true',
             help='return raw response from HTTP request method')
+        parser.add_argument(
+            '--key',
+            dest='key',
+            action='store_true',
+            help='return key value in response - only if response is a dictionary containing a single key value')
         return parser
 
+    def configure_logging(self):
+        """ configure logging
+        """
+        if self.args.debug:
+            logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+
     def get_authentication(self):
-        """ return sanitized auth dictionary consisting of any environment variables set
+        """ return sanitized dictionary consisting of any R3C auth environment variables
         """
         auth = {}
         for auth_key in self.auth_keys:
@@ -113,7 +123,7 @@ class RESTcli():
         return RESTclient(self.args.address, **self.get_authentication())
 
     def get_attributes(self):
-        """ return list of string comma-delimited attributes
+        """ return comma-delimited string of attributes as list
         """
         if self.args.attributes:
             return [attribute.strip() for attribute in self.args.attributes.split(',')]
@@ -136,16 +146,17 @@ class RESTcli():
     def execute_request(self, client):
         """ execute HTTP request method
         """
-        if self.args.method == 'GET':
-            response = client.get(self.args.endpoint, **self.get_arguments())
-        elif self.args.method == 'POST':
-            response = client.post(self.args.endpoint, **self.get_arguments())
+        arguments = self.get_arguments()
+        if self.args.method == 'POST':
+            response = client.post(self.args.endpoint, **arguments)
         elif self.args.method == 'PUT':
-            response = client.put(self.args.endpoint, **self.get_arguments())
+            response = client.put(self.args.endpoint, **arguments)
         elif self.args.method == 'PATCH':
-            response = client.patch(self.args.endpoint, **self.get_arguments())
+            response = client.patch(self.args.endpoint, **arguments)
+        elif self.args.method == 'DELETE':
+            response = client.delete(self.args.endpoint, **arguments)
         else:
-            response = client.delete(self.args.endpoint)
+            response = client.get(self.args.endpoint, **arguments)
         return response
 
     def filter_response(self, response, attributes):
@@ -153,28 +164,38 @@ class RESTcli():
         """
         if not attributes:
             return response
-        if isinstance(response, dict):
+
+        if isinstance(response, (dict, requests.structures.CaseInsensitiveDict)):
             filtered = {}
-            for attribute in attributes:
-                if attribute in response:
-                    filtered[attribute] = response[attribute]
+            for key in response:
+                for attribute in attributes:
+                    if re.match(attribute, key):
+                        if key not in filtered:
+                            filtered[key] = response[key]
+
         elif isinstance(response, Iterable) and not isinstance(response, str):
             filtered = []
             for item in response:
                 filtered.append(self.filter_response(item, attributes))
+
         else:
             filtered = response
+
         return filtered
 
     def process_response(self, response, attributes):
         """ process HTTP request response
         """
         if attributes:
-            result = self.filter_response(response, attributes)
+            if self.args.raw_response:
+                result = self.filter_response(response.headers, attributes)
+            else:
+                result = self.filter_response(response, attributes)
         else:
             result = response
+
         if result:
-            if self.args.raw_response:
+            if self.args.raw_response and not attributes:
                 print(f'status_code: {result.status_code}')
                 print(f'url: {result.url}')
                 print('headers:')
@@ -182,4 +203,7 @@ class RESTcli():
                 print('json:')
                 print(json.dumps(result.json(), indent=2))
             else:
-                print(json.dumps(result, indent=2))
+                if self.args.key and len(result) == 1 and isinstance(result, dict):
+                    print(list(result.values())[0])
+                else:
+                    print(json.dumps(result, indent=2))
