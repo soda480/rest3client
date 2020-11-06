@@ -125,7 +125,7 @@ RESTclient comes packaged with a command line interace (CLI) that can be used to
 ```bash
 usage: rest [-h] [--address ADDRESS] [--json JSON_DATA]
             [--headers HEADERS_DATA] [--attributes ATTRIBUTES] [--debug]
-            [--raw]
+            [--raw] [--key]
             method endpoint
 
 A CLI for rest3client
@@ -143,10 +143,13 @@ optional arguments:
                         string representing headers dictionary to send to HTTP
                         request method
   --attributes ATTRIBUTES
-                        attributes in JSON response from HTTP request method
-                        to filter out
+                        attributes to filter from response - if used with
+                        --raw will filter from headers otherwise will filter
+                        from JSON response
   --debug               display debug messages to stdout
   --raw                 return raw response from HTTP request method
+  --key                 return key value in response - only if response is a
+                        dictionary containing a single key value
 ```
 
 Set environment variables prefixed with `R3C_`.
