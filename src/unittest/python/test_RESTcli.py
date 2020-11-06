@@ -212,6 +212,26 @@ class TestRESTcli(unittest.TestCase):
         }
         self.assertEqual(result, expected_result)
 
+    def test__filter_response_Should_ReturnResponse_When_RegExAttributesAndResponseIsDict(self, *patches):
+        client = RESTcli(execute=False)
+        response = {
+            'a1': 'v1',
+            'a2': 'v2',
+            'a3': 'v3',
+            'a4': 'v4',
+            'b1': 'vb1',
+            'c1': 'vc1'
+        }
+        attributes = ['a.*', 'a4', 'c1']
+        result = client.filter_response(response, attributes)
+        expected_result = {
+            'a1': 'v1',
+            'a2': 'v2',
+            'a3': 'v3',
+            'a4': 'v4',
+            'c1': 'vc1'
+        }
+
     def test__filter_response_Should_ReturnResponse_When_AttributesAndResponseIsList(self, *patches):
         client = RESTcli(execute=False)
         response = [
@@ -249,15 +269,17 @@ class TestRESTcli(unittest.TestCase):
     @patch('rest3client.RESTcli.filter_response')
     def test__process_response_Should_CallExpected_When_AttributesRawResponse(self, filter_response_patch, *patches):
         client = RESTcli(execute=False)
-        client.args = Namespace(raw_response=True)
+        client.args = Namespace(raw_response=True, key=None)
         attributes = ['a2']
-        client.process_response('--response--', attributes)
+        response_mock = Mock()
+        response_mock.headers = {'h1': 'v1'}
+        client.process_response(response_mock, attributes)
 
     @patch('rest3client.restcli.json.dumps')
     @patch('rest3client.RESTcli.filter_response')
     def test__process_response_Should_CallExpected_When_AttributesNoRawResponse(self, filter_response_patch, *patches):
         client = RESTcli(execute=False)
-        client.args = Namespace(raw_response=None)
+        client.args = Namespace(raw_response=None, key=None)
         attributes = ['a2']
         client.process_response('--response--', attributes)
 
@@ -270,6 +292,18 @@ class TestRESTcli(unittest.TestCase):
         response_mock.status_code = 202
         response_mock.headers = {}
         client.process_response(response_mock, None)
+
+    @patch('rest3client.restcli.json.dumps')
+    @patch('rest3client.RESTcli.filter_response')
+    def test__process_response_Should_CallExpected_When_KeyAttributesRawResponse(self, filter_response_patch, *patches):
+        client = RESTcli(execute=False)
+        client.args = Namespace(raw_response=True, key=True)
+        headers = {'key': 'value'}
+        response_mock = Mock()
+        response_mock.headers = headers
+        filter_response_patch.return_value = headers
+        attributes = ['a2']
+        client.process_response(response_mock, attributes)
 
     def test__process_response_Should_CallExpected_When_NoAttributesNoResponse(self, *patches):
         client = RESTcli(execute=False)
