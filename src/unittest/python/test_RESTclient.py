@@ -78,6 +78,14 @@ class TestRESTclient(unittest.TestCase):
         self.assertEqual(client.bearer_token, bearer_token)
 
     @patch('rest3client.restclient.os.access', return_value=False)
+    def test__init__Should_SetAttributes_When_JWT(self, *patches):
+        hostname = 'api.name.com'
+        cabundle = 'cabundle'
+        jwtoken = 'jwtoken'
+        client = RESTclient(hostname, jwt=jwtoken, cabundle=cabundle)
+        self.assertEqual(client.jwt, jwtoken)
+
+    @patch('rest3client.restclient.os.access', return_value=False)
     @patch('rest3client.restclient.SSLAdapter')
     def test__init__Should_SetAttributes_When_CertfileCertpass(self, ssl_adapter_patch, *patches):
         client = RESTclient('api.name.com', certfile='-certfile-', certpass='-certpass-')
@@ -120,6 +128,16 @@ class TestRESTclient(unittest.TestCase):
         expected_result = {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer token'
+        }
+        self.assertEqual(result, expected_result)
+
+    @patch('rest3client.restclient.os.access')
+    def test__get_headers_Should_ReturnHeaders_When_JWT(self, *patches):
+        client = RESTclient('api.name.com', jwt='jwtoken')
+        result = client.get_headers()
+        expected_result = {
+            'Content-Type': 'application/json',
+            'Authorization': 'JWT jwtoken'
         }
         self.assertEqual(result, expected_result)
 
