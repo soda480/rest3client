@@ -33,15 +33,14 @@ use_plugin('python.install_dependencies')
 use_plugin('python.flake8')
 use_plugin('python.coverage')
 use_plugin('python.distutils')
-use_plugin('filter_resources')
 
 name = 'rest3client'
 authors = [
     Author('Emilio Reyes', 'emilio.reyes@intel.com')
 ]
-summary = 'A Python class providing primitive methods for enabling consumption of REST APIs'
+summary = 'An abstraction of the requests library providing a simpler interface to enable consumption of HTTP REST APIs'
 url = 'https://github.com/soda480/rest3client'
-version = '0.2.0'
+version = '0.2.1'
 default_task = [
     'clean',
     'analyze',
@@ -62,7 +61,6 @@ def set_properties(project):
     project.set_property('flake8_include_scripts', True)
     project.set_property('flake8_include_test_sources', True)
     project.set_property('flake8_ignore', 'E501, W503, F401')
-    project.get_property('filter_resources_glob').extend(['**/rest3client/*'])
     project.build_depends_on_requirements('requirements-build.txt')
     project.depends_on_requirements('requirements.txt')
     project.set_property('distutils_console_scripts',
@@ -92,7 +90,7 @@ def cyclomatic_complexity(project, logger):
         command.use_argument('-a')
         result = command.run_on_production_source_files(logger)
         if len(result.error_report_lines) > 0:
-            logger.error('Errors while running radon, see {0}'.format(result.error_report_file))
+            logger.error(f'Errors while running radon, see {result.error_report_file}')
         for line in result.report_lines[:-1]:
             logger.debug(line.strip())
         if not result.report_lines:
@@ -101,4 +99,4 @@ def cyclomatic_complexity(project, logger):
         logger.info(average_complexity_line)
 
     except Exception as exception:
-        print('Unable to execute cyclomatic complexity due to ERROR: {}'.format(str(exception)))
+        print(f'Unable to execute cyclomatic complexity due to ERROR: {exception}')

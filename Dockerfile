@@ -36,5 +36,3 @@ WORKDIR /opt/rest3client
 COPY --from=build-image /rest3client/target/dist/rest3client-*/dist/rest3client-*.tar.gz /opt/rest3client
 
 RUN pip install rest3client-*.tar.gz
-
-CMD echo 'DONE'

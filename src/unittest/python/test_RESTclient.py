@@ -687,10 +687,10 @@ class TestRESTclient(unittest.TestCase):
 
     def test__convert_numeric_Should_DoExpected_When_Called(self, *patches):
         data = {
-            'one':'1',
-            'two':'2',
-            'name':'name',
-            'bool':False
+            'one': '1',
+            'two': '2',
+            'name': 'name',
+            'bool': False
         }
         RESTclient.convert_numeric(data)
         self.assertEqual(data['one'], 1)
