@@ -40,7 +40,7 @@ class TestRESTcli(unittest.TestCase):
 
     @patch('rest3client.RESTcli.execute')
     def test__init__Should_CallExpected_When_Called(self, execute_patch, *patches):
-        client = RESTcli()
+        RESTcli()
         execute_patch.assert_called_once_with()
 
     @patch('rest3client.RESTcli.process_response')
@@ -84,7 +84,8 @@ class TestRESTcli(unittest.TestCase):
             None,
             None,
             '--certfile--',
-            '--certpass--'
+            '--certpass--',
+            None
         ]
         client = RESTcli(execute=False)
         result = client.get_authentication()
@@ -231,6 +232,7 @@ class TestRESTcli(unittest.TestCase):
             'a4': 'v4',
             'c1': 'vc1'
         }
+        self.assertEqual(result, expected_result)
 
     def test__filter_response_Should_ReturnResponse_When_AttributesAndResponseIsList(self, *patches):
         client = RESTcli(execute=False)

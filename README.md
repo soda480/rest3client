@@ -19,6 +19,7 @@ The library supports most popular authentication schemes:
 - API Key-based authentication
 - Token-based authentication
 - Certificate-based authentication
+- JWT authentication
 
 ### Installation ###
 ```bash
@@ -45,6 +46,9 @@ The examples below show how RESTclient can be used to consume the GitHub REST AP
 
 # certificate-based authentication
 >>> client = RESTclient('my-api.my-company.com', certfile='/path/to/my-certificate.pem', certpass='--my-certificate-password--')
+
+# jwt authentication
+>>> client = RESTclient('my-api.my-company.com', jwt='--my-jwt--')
 ```
 
 `GET` request
@@ -174,6 +178,11 @@ For certificate-based authentication:
 ```bash
 export R3C_CERTFILE='/path/to/my-certificate.pem'
 export R3C_CERTPASS='--certificate-password--'
+```
+
+For jwt-based authentication:
+```bash
+export R3C_JWT=--my-jwt--
 ```
 
 Some examples for how to execute the CLI to consume the GitHUB API:

@@ -23,7 +23,8 @@ class RESTcli():
         'API_KEY',
         'BEARER_TOKEN',
         'CERTFILE',
-        'CERTPASS'
+        'CERTPASS',
+        'JWT'
     ]
 
     def __init__(self, execute=True):

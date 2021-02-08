@@ -239,9 +239,7 @@ class RESTclient():
         """ return list of all retry_ methods found in self
         """
         return [
-            item
-                for item in dir(self)
-                     if callable(getattr(self, item)) and item.startswith('retry_')
+            item for item in dir(self) if callable(getattr(self, item)) and item.startswith('retry_')
         ]
 
     @staticmethod
