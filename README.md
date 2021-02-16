@@ -120,6 +120,12 @@ Adding the method above to a subclass of RESTclient will have the affect of deco
 @retry(retry_on_exception=retry_connection_error, 'wait_random_min'=10000, 'wait_random_max'=20000, 'stop_max_attempt_number'=6)
 ```
 
+You also have the option of overriding any of the retry argument with environment variables. The environment variable must be of the form `${retry_method_name}_${argument}` in all caps. For example, setting the following environment variables will override the static settings in the `retry_connection_error` method docstring:
+
+```bash
+export RETRY_CONNECTION_ERROR_WAIT_RANDOM_MIN = 5000
+export RETRY_CONNECTION_ERROR_WAIT_RANDOM_MAX = 15000
+```
 
 #### Real Eamples
 See [GitHub3API](https://github.com/soda480/github3api) for an example of how RESTclient can be subclassed to provide further custom functionality for a specific REST API (including retry on exceptions). 
