@@ -243,13 +243,32 @@ class RESTclient():
         ]
 
     @staticmethod
-    def get_retry_kwargs(doc):
+    def get_retry_key_values(method_name, kwargs_str):
+        """ return dictionary representing key value pairs from kwargs_str
+            method will first check if value is set as an environment variable
+                ${method_name}_${argument}
+        """
+        key_values = {}
+        for kwarg in kwargs_str.split():
+            if ':' in kwarg:
+                kwarg_split = kwarg.split(':')
+                key = kwarg_split[0]
+                env_var = f'{method_name.upper()}_{key.upper()}'
+                value = os.getenv(env_var, kwarg_split[1])
+                if not value:
+                    raise ValueError(f"the retry argument '{key}' has no value and environment variable for '{env_var}' was not set")
+                key_values[key] = value
+        return key_values
+
+    @staticmethod
+    def get_retry_kwargs(method_name, doc):
         """ return retry kwargs found in doc
         """
         regex = r'^.*retry:(?P<kwargs>.*)$'
         match = re.match(regex, doc, re.DOTALL)
         if match:
-            return match.group('kwargs').strip()
+            kwargs_str = match.group('kwargs').strip()
+            return RESTclient.get_retry_key_values(method_name, kwargs_str)
 
     @staticmethod
     def convert_numeric(data):
@@ -263,18 +282,15 @@ class RESTclient():
     def get_retry_metadata(method, method_help):
         """ return retry metadata found in method help
         """
-        kwargs = RESTclient.get_retry_kwargs(method_help)
-        if not kwargs:
+        metadata = RESTclient.get_retry_kwargs(method.__name__, method_help)
+        if metadata is None:
             return
-        metadata = dict(kwarg.split(':') for kwarg in kwargs.split() if ':' in kwarg)
-        if not metadata:
-            metadata = {}
         RESTclient.convert_numeric(metadata)
         metadata['retry_on_exception'] = method
         return metadata
 
     def get_retries(self, retries):
-        """ return list of all retry methods with metadata found in self
+        """ appends discovered retry methods with metadata found within self to retries list
         """
         retry_methods = self.get_retry_methods()
         for retry_method in retry_methods:

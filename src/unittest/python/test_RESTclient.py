@@ -663,18 +663,16 @@ class TestRESTclient(unittest.TestCase):
         ]
         self.assertEqual(result, expected_result)
 
-    def test__get_retry_kwargs_Should_ReturnExpected_When_Match(self, *patches):
+    @patch('rest3client.RESTclient.get_retry_key_values')
+    def test__get_retry_kwargs_Should_ReturnExpected_When_Match(self, get_retry_key_values_patch, *patches):
         doc = """ return True if exception is a type1 exception
             retry:
                 wait_random_min:10000
                 wait_random_max:20000
                 stop_max_attempt_number:6
         """
-        expected_result = """wait_random_min:10000
-                wait_random_max:20000
-                stop_max_attempt_number:6"""
-        result = RESTclient.get_retry_kwargs(doc)
-        self.assertEqual(result, expected_result)
+        result = RESTclient.get_retry_kwargs('retry_type1_error', doc)
+        self.assertEqual(result, get_retry_key_values_patch.return_value)
 
     def test__get_retry_kwargs_Should_ReturnNone_When_NoMatch(self, *patches):
         doc = """ return True if exception is a type1 exception
@@ -682,7 +680,7 @@ class TestRESTclient(unittest.TestCase):
                 wait_random_max:20000
                 stop_max_attempt_number:6
         """
-        result = RESTclient.get_retry_kwargs(doc)
+        result = RESTclient.get_retry_kwargs('retry_type1_error', doc)
         self.assertIsNone(result)
 
     def test__convert_numeric_Should_DoExpected_When_Called(self, *patches):
@@ -699,24 +697,18 @@ class TestRESTclient(unittest.TestCase):
         self.assertEqual(data['bool'], False)
 
     @patch('rest3client.RESTclient.get_retry_kwargs')
-    def test__get_retry_metadata_Should_ReturnNone_When_NoKwargs(self, get_retry_kwargs_patch, *patches):
+    def test__get_retry_metadata_Should_ReturnNone_When_NoRetry(self, get_retry_kwargs_patch, *patches):
         get_retry_kwargs_patch.return_value = None
-        mock_method = Mock()
+        mock_method = Mock(__name__='retry_type1_error')
         method_help = """ return True if exception is a type1 exception
-            retry:
-                wait_random_min:10000
-                wait_random_max:20000
-                stop_max_attempt_number:6
         """
         result = RESTclient.get_retry_metadata(mock_method, method_help)
         self.assertIsNone(result)
 
     @patch('rest3client.RESTclient.get_retry_kwargs')
-    def test__get_retry_metadata_Should_ReturnNone_When_NoMetadata(self, get_retry_kwargs_patch, *patches):
-        get_retry_kwargs_patch.return_value = """
-
-        """
-        mock_method = Mock()
+    def test__get_retry_metadata_Should_ReturnNone_When_NoRetryMetadata(self, get_retry_kwargs_patch, *patches):
+        get_retry_kwargs_patch.return_value = {}
+        mock_method = Mock(__name__='retry_type1_error')
         method_help = """ return True if exception is a type1 exception
             retry:
 
@@ -729,10 +721,12 @@ class TestRESTclient(unittest.TestCase):
 
     @patch('rest3client.RESTclient.get_retry_kwargs')
     def test__get_retry_metadata_Should_ReturnExpected_When_Called(self, get_retry_kwargs_patch, *patches):
-        get_retry_kwargs_patch.return_value = """wait_random_min:10000
-                wait_random_max:20000
-                stop_max_attempt_number:6"""
-        mock_method = Mock()
+        get_retry_kwargs_patch.return_value = {
+            'wait_random_min': '10000',
+            'wait_random_max': '20000',
+            'stop_max_attempt_number': '6'
+        }
+        mock_method = Mock(__name__='retry_type1_error')
         method_help = """ return True if exception is a type1 exception
             retry:
                 wait_random_min:10000
@@ -748,10 +742,10 @@ class TestRESTclient(unittest.TestCase):
         }
         self.assertEqual(result, expected_result)
 
-    @patch('rest3client.RESTclient.retry_type4_error', create=True)
-    @patch('rest3client.RESTclient.retry_type3_error', create=True)
-    @patch('rest3client.RESTclient.retry_type2_error', create=True, __doc__=None)
-    @patch('rest3client.RESTclient.retry_type1_error', create=True)
+    @patch('rest3client.RESTclient.retry_type4_error', create=True, __name__='retry_type4_error')
+    @patch('rest3client.RESTclient.retry_type3_error', create=True, __name__='retry_type3_error')
+    @patch('rest3client.RESTclient.retry_type2_error', create=True, __name__='retry_type2_error', __doc__=None)
+    @patch('rest3client.RESTclient.retry_type1_error', create=True, __name__='retry_type1_error')
     @patch('rest3client.RESTclient.get_retry_metadata')
     def test__get_retries_Should_ReturnExpected_When_Called(self, get_retry_metadata_patch, *patches):
         get_retry_metadata_patch.side_effect = [
@@ -769,3 +763,35 @@ class TestRESTclient(unittest.TestCase):
             {'key': 'retry_type3_error_metadata'}
         ]
         self.assertEqual(client.retries, expected_retries)
+
+    def test__get_retry_key_values_Should_ReturnExpected_When_NoEnvEmptyValue(self, *patches):
+        result = RESTclient.get_retry_key_values('retry_type1_error', '')
+        expected_result = {}
+        self.assertEqual(result, expected_result)
+
+    def test__get_retry_key_values_Should_ReturnExpected_When_NoEnvNoMatchValue(self, *patches):
+        result = RESTclient.get_retry_key_values('retry_type1_error', 'some non-matching text here')
+        expected_result = {}
+        self.assertEqual(result, expected_result)
+
+    def test__get_retry_key_values_Should_ReturnExpected_When_NoEnvWithValues(self, *patches):
+        result = RESTclient.get_retry_key_values('retry_type1_error', 'wait_fixed:60000\n                stop_max_attempt_number:60')
+        expected_result = {
+            'wait_fixed': '60000',
+            'stop_max_attempt_number': '60'
+        }
+        self.assertEqual(result, expected_result)
+
+    def test__get_retry_key_values_Should_RaiseValueError_When_NoEnvNoValue(self, *patches):
+        with self.assertRaises(ValueError):
+            RESTclient.get_retry_key_values('retry_type1_error', 'wait_fixed:\n                stop_max_attempt_number:')
+
+    @patch('rest3client.restclient.os.getenv')
+    def test__get_retry_key_values_Should_ReturnExpected_When_EnvWithNoValues(self, getenv_patch, *patches):
+        getenv_patch.side_effect = ['60000', '60']
+        result = RESTclient.get_retry_key_values('retry_type1_error', 'wait_fixed:\n                stop_max_attempt_number:')
+        expected_result = {
+            'wait_fixed': '60000',
+            'stop_max_attempt_number': '60'
+        }
+        self.assertEqual(result, expected_result)
