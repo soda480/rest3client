@@ -21,6 +21,7 @@ import logging
 import base64
 import requests
 from collections.abc import Iterable
+from copy import deepcopy
 
 from rest3client.ssladapter import SSLAdapter
 from retrying import retry
@@ -243,71 +244,57 @@ class RESTclient():
         ]
 
     @staticmethod
-    def get_retry_key_values(method_name, kwargs_str):
-        """ return dictionary representing key value pairs from kwargs_str
+    def add_retry_key_values(key_values, retry_text):
+        """ add key value pairs parsed from retry_text to key_values
             method will first check if value is set as an environment variable
                 ${method_name}_${argument}
         """
-        key_values = {}
-        for kwarg in kwargs_str.split():
-            if ':' in kwarg:
-                kwarg_split = kwarg.split(':')
-                key = kwarg_split[0]
+        method_name = key_values['retry_on_exception'].__name__
+        for line in retry_text.split():
+            if ':' in line:
+                line_split = line.split(':')
+                key = line_split[0]
                 env_var = f'{method_name.upper()}_{key.upper()}'
-                value = os.getenv(env_var, kwarg_split[1])
+                value = os.getenv(env_var, line_split[1])
                 if not value:
                     raise ValueError(f"the retry argument '{key}' has no value and environment variable for '{env_var}' was not set")
-                key_values[key] = value
+                key_values[key] = int(value) if value.isnumeric() else value
+
+    @staticmethod
+    def get_retry_key_values(method, method_doc):
+        """ return dictionary of retry key value pairs found in method doc
+        """
+        regex = r'^.*retry:(?P<retry_text>.*)$'
+        match = re.match(regex, method_doc, re.DOTALL)
+        if not match:
+            return
+        key_values = {
+            'retry_on_exception': method
+        }
+        retry_text = match.group('retry_text').strip()
+        RESTclient.add_retry_key_values(key_values, retry_text)
         return key_values
 
-    @staticmethod
-    def get_retry_kwargs(method_name, doc):
-        """ return retry kwargs found in doc
-        """
-        regex = r'^.*retry:(?P<kwargs>.*)$'
-        match = re.match(regex, doc, re.DOTALL)
-        if match:
-            kwargs_str = match.group('kwargs').strip()
-            return RESTclient.get_retry_key_values(method_name, kwargs_str)
-
-    @staticmethod
-    def convert_numeric(data):
-        """ convert data dictionary values to numbers if numeric
-        """
-        for key, value in data.items():
-            if isinstance(value, str) and value.isnumeric():
-                data[key] = int(value)
-
-    @staticmethod
-    def get_retry_metadata(method, method_help):
-        """ return retry metadata found in method help
-        """
-        metadata = RESTclient.get_retry_kwargs(method.__name__, method_help)
-        if metadata is None:
-            return
-        RESTclient.convert_numeric(metadata)
-        metadata['retry_on_exception'] = method
-        return metadata
-
     def get_retries(self, retries):
-        """ appends discovered retry methods with metadata found within self to retries list
+        """ append all retry methods with their arguments discovered within self to the retries list
         """
         retry_methods = self.get_retry_methods()
         for retry_method in retry_methods:
             method = getattr(self, retry_method)
-            method_help = method.__doc__
-            if not method_help:
+            method_doc = method.__doc__
+            if not method_doc:
                 continue
-            retry_metadata = RESTclient.get_retry_metadata(method, method_help)
-            if not retry_metadata:
+            retry_key_values = RESTclient.get_retry_key_values(method, method_doc)
+            if not retry_key_values:
                 continue
-            retries.append(retry_metadata)
+            logger.debug(f"discovered retry method '{retry_key_values['retry_on_exception'].__name__}'")
+            retries.append(retry_key_values)
 
     def decorate_retry(self, retries):
         """ decorate request methods with retry decorator where kwargs specified in retries list
             retry kwargs must conform to prescribed retry arguments, see: https://pypi.org/project/retrying/
         """
-        logger.debug('decorating request methods with retry')
+        logger.debug('adding retry decorators to all request methods')
         for retry_kwargs in retries:
             RESTclient.log_retry_kwargs(retry_kwargs)
             self.get = retry(**retry_kwargs)(self.get)
@@ -344,9 +331,10 @@ class RESTclient():
     def log_retry_kwargs(kwargs):
         """ log retry kwargs parameters
         """
+        kwargs_copy = deepcopy(kwargs)
         for key, value in kwargs.items():
             if callable(value):
-                value = value.__name__
-            logger.debug(f'{key}={value}')
+                kwargs_copy[key] = value.__name__
+        logger.debug(json.dumps(kwargs_copy, indent=2))
 
     request_handler = staticmethod(request_handler)
