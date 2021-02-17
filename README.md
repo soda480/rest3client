@@ -90,7 +90,7 @@ The examples below show how RESTclient can be used to consume the GitHub REST AP
 #### Retries
 Add support for retry using the `retrying` library: https://pypi.org/project/retrying/
 
-Instantiating RESTclient with a `retries` key word argument will decorate all request methods (`get`, `put`, `post`, `delete` and `patch`) with a retry decorator using the provided arguments - i.e. wait 2 seconds between retries and limit retry attempts to 3.
+Instantiating RESTclient with a `retries` key word argument will decorate all request methods (`get`, `put`, `post`, `delete` and `patch`) with a retry decorator using the provided arguments. For example, to retry on any error waiting 2 seconds between retries and limiting retry attempts to 3.
 ```python
 >>> client = RESTclient('api.github.com', retries=[{'wait_fixed': 2000, 'stop_max_attempt_number': 3}])
 ```
