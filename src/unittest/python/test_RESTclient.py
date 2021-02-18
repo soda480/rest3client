@@ -88,19 +88,33 @@ class TestRESTclient(unittest.TestCase):
     @patch('rest3client.restclient.os.access', return_value=False)
     @patch('rest3client.restclient.SSLAdapter')
     def test__init__Should_SetAttributes_When_CertfileCertpass(self, ssl_adapter_patch, *patches):
-        client = RESTclient('api.name.com', certfile='-certfile-', certpass='-certpass-')
-        self.assertEqual(client.certfile, '-certfile-')
-        ssl_adapter_patch.assert_called_once_with(certfile='-certfile-', certpass='-certpass-')
-        self.assertEqual(client.ssl_adapter, ssl_adapter_patch.return_value)
+        certfile = '--certfile--'
+        certpass = '--certpass--'
+        client = RESTclient('api.name.com', certfile=certfile, certpass=certpass)
+        self.assertEqual(client.certfile, certfile)
+        self.assertEqual(client.certpass, certpass)
+
+    @patch('rest3client.restclient.os.access')
+    @patch('rest3client.restclient.SSLAdapter')
+    @patch('rest3client.restclient.requests.Session')
+    def test__init_Should_InstantiateSslAdapterAndMountSslAdapterToSession_When_CertfileCertpass(self, session_patch, ssl_adapter_patch, *patches):
+        session_mock = Mock()
+        session_patch.return_value = session_mock
+        hostname = 'api.name.com'
+        certfile = '--certfile--'
+        certpass = '--certpass--'
+        client = RESTclient('api.name.com', certfile=certfile, certpass=certpass)
+        ssl_adapter_patch.assert_called_once_with(certfile=certfile, certpass=certpass)
+        client.session.mount.assert_called_once_with(f'https://{hostname}', ssl_adapter_patch.return_value)
 
     @patch('rest3client.restclient.os.access', return_value=False)
-    @patch('rest3client.RESTclient.decorate_retry')
-    def test__init__Should_SetAttributes_When_Retries(self, decorate_retry_patch, *patches):
+    @patch('rest3client.RESTclient.decorate_retries')
+    def test__init__Should_SetAttributes_When_Retries(self, decorate_retries_patch, *patches):
         hostname = 'api.name.com'
         retries = [{'key1': 'val1'}, {'key1': 'val2'}]
         client = RESTclient(hostname, retries=retries)
         self.assertEqual(client.retries, retries)
-        decorate_retry_patch.assert_called_once_with(retries)
+        decorate_retries_patch.assert_called_once_with()
 
     @patch('rest3client.restclient.os.access')
     def test__get_headers_Should_ReturnHeaders_When_Called(self, *patches):
@@ -223,22 +237,6 @@ class TestRESTclient(unittest.TestCase):
         self.assertFalse(mock_function.called)
 
     @patch('rest3client.restclient.os.access')
-    @patch('rest3client.RESTclient.get_response', return_value='result')
-    @patch('rest3client.restclient.SSLAdapter')
-    @patch('rest3client.restclient.requests.Session')
-    def test__request_handler_Should_CallFunctionAndReturnResult_When_SslAdapter(self, session_patch, ssl_adapter_patch, *patches):
-        session_mock = Mock()
-        session_patch.return_value.__enter__.return_value = session_mock
-
-        mock_function = Mock(__name__='mocked method')
-        client = RESTclient('api.name.com', certfile='-certfile-', certpass='-certpass-')
-        decorated_function = RESTclient.request_handler(mock_function)
-        result = decorated_function(client, '/rest/endpoint', key='value')
-        session_mock.mount.assert_called_once_with('https://api.name.com', ssl_adapter_patch.return_value)
-        session_mock.request.assert_called_once_with('mocked method', 'https://api.name.com/rest/endpoint', key='value', headers={'Content-Type': 'application/json'}, verify='/etc/ssl/certs/ca-certificates.crt')
-        self.assertEqual(result, 'result')
-
-    @patch('rest3client.restclient.os.access')
     @patch('rest3client.RESTclient.get_headers', return_value={'h1': 'v1'})
     def test__get_arguments_Should_SetHeaders_When_NoHeadersSpecified(self, *patches):
         client = RESTclient('api.name.com')
@@ -350,26 +348,28 @@ class TestRESTclient(unittest.TestCase):
         self.assertEqual(result, mock_response)
 
     @patch('rest3client.restclient.os.access')
-    @patch('rest3client.restclient.requests')
-    def test__get_Should_CallRequestsGet_When_Called(self, requests, *patches):
+    @patch('rest3client.restclient.requests.Session')
+    def test__get_Should_CallRequestsGet_When_Called(self, *patches):
         client = RESTclient('api.name.com')
         client.get('/rest/endpoint')
         requests_get_call = call(
+            'get',
             'https://api.name.com/rest/endpoint',
             headers={
                 'Content-Type': 'application/json'},
             verify=client.cabundle)
-        self.assertTrue(requests_get_call in requests.get.mock_calls)
+        self.assertTrue(requests_get_call in client.session.request.mock_calls)
 
     @patch('rest3client.restclient.os.access')
-    @patch('rest3client.restclient.requests')
-    def test__post_Should_CallRequestsPost_When_Called(self, requests, *patches):
+    @patch('rest3client.restclient.requests.Session')
+    def test__post_Should_CallRequestsPost_When_Called(self, *patches):
         client = RESTclient('api.name.com')
         requests_data = {
             'arg1': 'val1',
             'arg2': 'val2'}
         client.post('/rest/endpoint', json=requests_data)
         requests_post_call = call(
+            'post',
             'https://api.name.com/rest/endpoint',
             headers={
                 'Content-Type': 'application/json'},
@@ -377,17 +377,18 @@ class TestRESTclient(unittest.TestCase):
                 'arg1': 'val1',
                 'arg2': 'val2'},
             verify=client.cabundle)
-        self.assertTrue(requests_post_call in requests.post.mock_calls)
+        self.assertTrue(requests_post_call in client.session.request.mock_calls)
 
     @patch('rest3client.restclient.os.access')
-    @patch('rest3client.restclient.requests')
-    def test__put_Should_CallRequestsPut_When_Called(self, requests, *patches):
+    @patch('rest3client.restclient.requests.Session')
+    def test__put_Should_CallRequestsPut_When_Called(self, *patches):
         client = RESTclient('api.name.com')
         requests_data = {
             'arg1': 'val1',
             'arg2': 'val2'}
         client.put('/rest/endpoint', json=requests_data)
         requests_put_call = call(
+            'put',
             'https://api.name.com/rest/endpoint',
             headers={
                 'Content-Type': 'application/json'},
@@ -395,17 +396,18 @@ class TestRESTclient(unittest.TestCase):
                 'arg1': 'val1',
                 'arg2': 'val2'},
             verify=client.cabundle)
-        self.assertTrue(requests_put_call in requests.put.mock_calls)
+        self.assertTrue(requests_put_call in client.session.request.mock_calls)
 
     @patch('rest3client.restclient.os.access')
-    @patch('rest3client.restclient.requests')
-    def test__patch_Should_CallRequestsPatch_When_Called(self, requests, *patches):
+    @patch('rest3client.restclient.requests.Session')
+    def test__patch_Should_CallRequestsPatch_When_Called(self, *patches):
         client = RESTclient('api.name.com')
         requests_data = {
             'arg1': 'val1',
             'arg2': 'val2'}
         client.patch('/rest/endpoint', json=requests_data)
         requests_patch_call = call(
+            'patch',
             'https://api.name.com/rest/endpoint',
             headers={
                 'Content-Type': 'application/json'},
@@ -413,19 +415,20 @@ class TestRESTclient(unittest.TestCase):
                 'arg1': 'val1',
                 'arg2': 'val2'},
             verify=client.cabundle)
-        self.assertTrue(requests_patch_call in requests.patch.mock_calls)
+        self.assertTrue(requests_patch_call in client.session.request.mock_calls)
 
     @patch('rest3client.restclient.os.access')
-    @patch('rest3client.restclient.requests')
-    def test__delete_Should_CallRequestsDelete_When_Called(self, requests, *patches):
+    @patch('rest3client.restclient.requests.Session')
+    def test__delete_Should_CallRequestsDelete_When_Called(self, *patches):
         client = RESTclient('api.name.com')
         client.delete('/rest/endpoint')
         requests_delete_call = call(
+            'delete',
             'https://api.name.com/rest/endpoint',
             headers={
                 'Content-Type': 'application/json'},
             verify=client.cabundle)
-        self.assertEqual(requests.delete.mock_calls[0], requests_delete_call)
+        self.assertTrue(requests_delete_call in client.session.request.mock_calls)
 
     @patch('rest3client.restclient.os.access', return_value=False)
     def test__init__Should_SetUsernamePasswordAttributes_When_CalledWithUsernamePassword(self, *patches):
@@ -625,12 +628,13 @@ class TestRESTclient(unittest.TestCase):
 
     @patch('rest3client.RESTclient.log_retry_kwargs')
     @patch('rest3client.restclient.os.access')
+    @patch('rest3client.RESTclient.discover_retries')
     @patch('rest3client.restclient.retry')
-    def test__decorate_retry_Should_CallExpected_When_Called(self, retry_patch, *patches):
+    def test__decorate_retries_Should_CallExpected_When_Called(self, retry_patch, discover_retries_patch, *patches):
         mock_method = Mock(__name__='retry_type1_error')
-        client = RESTclient('api.name.com')
         retries = [{'retry_on_exception': mock_method, 'key1': 'val1', 'key2': 'val2'}]
-        client.decorate_retry(retries)
+        client = RESTclient('api.name.com', retries=retries)
+        discover_retries_patch.assert_called_once_with()
         retry_get_call = call(retry_on_exception=mock_method, key1='val1', key2='val2')(client.get)
         self.assertTrue(retry_get_call, retry_patch.mock_calls)
         retry_post_call = call(retry_on_exception=mock_method, key1='val1', key2='val2')(client.post)
@@ -642,7 +646,6 @@ class TestRESTclient(unittest.TestCase):
         retry_delete_call = call(retry_on_exception=mock_method, key1='val1', key2='val2')(client.delete)
         self.assertTrue(retry_delete_call, retry_patch.mock_calls)
 
-    @unittest.skip('skip')
     @patch('rest3client.restclient.logger')
     def test__log_retry_kwargs_Should_CallExpected_When_Called(self, logger_patch, *patches):
         function_mock = Mock(__name__='function1')
@@ -652,7 +655,6 @@ class TestRESTclient(unittest.TestCase):
 
     @patch('rest3client.RESTclient.retry_type2_error', create=True)
     @patch('rest3client.RESTclient.retry_type1_error', create=True)
-    @patch('rest3client.RESTclient.get_retries', return_value=None)
     def test__get_retry_methods_Should_ReturnExpected_When_Called(self, *patches):
         client = RESTclient('api.name.com')
         result = client.get_retry_methods()
@@ -691,8 +693,9 @@ class TestRESTclient(unittest.TestCase):
     @patch('rest3client.RESTclient.retry_type3_error', create=True, __name__='retry_type3_error')
     @patch('rest3client.RESTclient.retry_type2_error', create=True, __name__='retry_type2_error', __doc__=None)
     @patch('rest3client.RESTclient.retry_type1_error', create=True, __name__='retry_type1_error')
+    @patch('rest3client.RESTclient.decorate_retries')
     @patch('rest3client.RESTclient.get_retry_key_values')
-    def test__get_retries_Should_ReturnExpected_When_Called(self, get_retry_key_values_patch, *patches):
+    def test__discover_retries_Should_ReturnExpected_When_Called(self, get_retry_key_values_patch, *patches):
         mock_method0 = Mock(__name__='retry_type0_error')
         mock_method1 = Mock(__name__='retry_type1_error')
         mock_method3 = Mock(__name__='retry_type3_error')
@@ -705,6 +708,7 @@ class TestRESTclient(unittest.TestCase):
             {'retry_on_exception': mock_method0, 'key': 'retry_type0_error_metadata'}
         ]
         client = RESTclient('api.name.com', retries=retries)
+        client.discover_retries()
         expected_retries = [
             {'retry_on_exception': mock_method0, 'key': 'retry_type0_error_metadata'},
             {'retry_on_exception': mock_method1, 'key': 'retry_type1_error_metadata'},
