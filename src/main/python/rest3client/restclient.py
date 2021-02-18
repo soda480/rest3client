@@ -21,7 +21,6 @@ import logging
 import base64
 import requests
 from collections.abc import Iterable
-from copy import deepcopy
 
 from rest3client.ssladapter import SSLAdapter
 from retrying import retry
@@ -50,44 +49,28 @@ class RESTclient():
         """
         logger.debug('executing RESTclient constructor')
         self.hostname = hostname
+        self.session = requests.Session()
 
-        cabundle = kwargs.get('cabundle')
-        if not cabundle:
-            cabundle = RESTclient.cabundle
+        cabundle = kwargs.get('cabundle', RESTclient.cabundle)
         self.cabundle = cabundle if os.access(cabundle, os.R_OK) else False
 
-        username = kwargs.get('username')
-        if username:
-            self.username = username
+        self.username = kwargs.get('username')
+        self.password = kwargs.get('password')
 
-        password = kwargs.get('password')
-        if password:
-            self.password = password
+        self.api_key = kwargs.get('api_key')
 
-        api_key = kwargs.get('api_key')
-        if api_key:
-            self.api_key = api_key
+        self.bearer_token = kwargs.get('bearer_token')
 
-        bearer_token = kwargs.get('bearer_token')
-        if bearer_token:
-            self.bearer_token = bearer_token
+        self.jwt = kwargs.get('jwt')
 
-        jwt = kwargs.get('jwt')
-        if jwt:
-            self.jwt = jwt
+        self.certfile = kwargs.get('certfile')
+        self.certpass = kwargs.get('certpass')
+        if self.certfile and self.certpass:
+            ssl_adapter = SSLAdapter(certfile=self.certfile, certpass=self.certpass)
+            self.session.mount(f'https://{self.hostname}', ssl_adapter)
 
-        certfile = kwargs.get('certfile')
-        certpass = kwargs.get('certpass')
-        self.certfile = certfile
-        self.ssl_adapter = None
-        if certfile and certpass:
-            self.ssl_adapter = SSLAdapter(certfile=certfile, certpass=certpass)
-
-        retries = kwargs.get('retries', [])
-        self.get_retries(retries)
-        if retries:
-            self.decorate_retry(retries)
-            self.retries = retries
+        self.retries = kwargs.get('retries', [])
+        self.decorate_retries()
 
     def get_headers(self, **kwargs):
         """ return headers to pass to requests method
@@ -97,17 +80,17 @@ class RESTclient():
         if 'Content-Type' not in headers:
             headers['Content-Type'] = 'application/json'
 
-        if hasattr(self, 'username') and hasattr(self, 'password'):
+        if self.username and self.password:
             basic = base64.b64encode((f'{self.username}:{self.password}').encode())
             headers['Authorization'] = f'Basic {basic}'.replace('b\'', '').replace('\'', '')
 
-        if hasattr(self, 'api_key'):
+        if self.api_key:
             headers['x-api-key'] = self.api_key
 
-        if hasattr(self, 'bearer_token'):
+        if self.bearer_token:
             headers['Authorization'] = f'Bearer {self.bearer_token}'
 
-        if hasattr(self, 'jwt'):
+        if self.jwt:
             headers['Authorization'] = f'JWT {self.jwt}'
 
         return headers
@@ -196,12 +179,7 @@ class RESTclient():
             self.log_request(function.__name__.upper(), arguments, noop)
             if noop:
                 return
-            if self.ssl_adapter:
-                with requests.Session() as session:
-                    session.mount(f'https://{self.hostname}', self.ssl_adapter)
-                    response = session.request(function.__name__, arguments.pop('address'), **arguments)
-            else:
-                response = function(self, endpoint, **arguments)
+            response = function(self, endpoint, **arguments)
             return self.get_response(response, **kwargs)
 
         return _request_handler
@@ -210,31 +188,31 @@ class RESTclient():
     def post(self, endpoint, **kwargs):
         """ helper method to submit post requests
         """
-        return requests.post(kwargs.pop('address'), **kwargs)
+        return self.session.request('post', kwargs.pop('address'), **kwargs)
 
     @request_handler
     def put(self, endpoint, **kwargs):
         """ helper method to submit put requests
         """
-        return requests.put(kwargs.pop('address'), **kwargs)
+        return self.session.request('put', kwargs.pop('address'), **kwargs)
 
     @request_handler
     def get(self, endpoint, **kwargs):
         """ helper method to submit get requests
         """
-        return requests.get(kwargs.pop('address'), **kwargs)
+        return self.session.request('get', kwargs.pop('address'), **kwargs)
 
     @request_handler
     def delete(self, endpoint, **kwargs):
         """ helper method to submit delete requests
         """
-        return requests.delete(kwargs.pop('address'), **kwargs)
+        return self.session.request('delete', kwargs.pop('address'), **kwargs)
 
     @request_handler
     def patch(self, endpoint, **kwargs):
         """ helper method to submit patch requests
         """
-        return requests.patch(kwargs.pop('address'), **kwargs)
+        return self.session.request('patch', kwargs.pop('address'), **kwargs)
 
     def get_retry_methods(self):
         """ return list of all retry_ methods found in self
@@ -275,8 +253,8 @@ class RESTclient():
         RESTclient.add_retry_key_values(key_values, retry_text)
         return key_values
 
-    def get_retries(self, retries):
-        """ append all retry methods with their arguments discovered within self to the retries list
+    def discover_retries(self):
+        """ append all retry methods with their arguments discovered within self to the retries list in self
         """
         retry_methods = self.get_retry_methods()
         for retry_method in retry_methods:
@@ -288,14 +266,15 @@ class RESTclient():
             if not retry_key_values:
                 continue
             logger.debug(f"discovered retry method '{retry_key_values['retry_on_exception'].__name__}'")
-            retries.append(retry_key_values)
+            self.retries.append(retry_key_values)
 
-    def decorate_retry(self, retries):
+    def decorate_retries(self):
         """ decorate request methods with retry decorator where kwargs specified in retries list
             retry kwargs must conform to prescribed retry arguments, see: https://pypi.org/project/retrying/
         """
+        self.discover_retries()
         logger.debug('adding retry decorators to all request methods')
-        for retry_kwargs in retries:
+        for retry_kwargs in self.retries:
             RESTclient.log_retry_kwargs(retry_kwargs)
             self.get = retry(**retry_kwargs)(self.get)
             self.post = retry(**retry_kwargs)(self.post)
@@ -331,10 +310,11 @@ class RESTclient():
     def log_retry_kwargs(kwargs):
         """ log retry kwargs parameters
         """
-        kwargs_copy = deepcopy(kwargs)
+        kwargs_copy = copy.deepcopy(kwargs)
         for key, value in kwargs.items():
             if callable(value):
                 kwargs_copy[key] = value.__name__
-        logger.debug(json.dumps(kwargs_copy, indent=2))
+        data = json.dumps(kwargs_copy, indent=2)
+        logger.debug(f"\n{data}")
 
     request_handler = staticmethod(request_handler)
