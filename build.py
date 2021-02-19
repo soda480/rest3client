@@ -40,7 +40,7 @@ authors = [
 ]
 summary = 'An abstraction of the requests library providing a simpler interface to enable consumption of HTTP REST APIs'
 url = 'https://github.com/soda480/rest3client'
-version = '0.3.0'
+version = '0.3.1'
 default_task = [
     'clean',
     'analyze',

@@ -215,7 +215,7 @@ class RESTclient():
         return self.session.request('patch', kwargs.pop('address'), **kwargs)
 
     def get_retry_methods(self):
-        """ return list of all retry_ methods found in self
+        """ return list of retry_ methods found in self
         """
         return [
             item for item in dir(self) if callable(getattr(self, item)) and item.startswith('retry_')
@@ -235,7 +235,7 @@ class RESTclient():
                 env_var = f'{method_name.upper()}_{key.upper()}'
                 value = os.getenv(env_var, line_split[1])
                 if not value:
-                    raise ValueError(f"the retry argument '{key}' has no value and environment variable for '{env_var}' was not set")
+                    raise ValueError(f"the retry argument '{key}' has no value and environment variable '{env_var}' was not set")
                 key_values[key] = int(value) if value.isnumeric() else value
 
     @staticmethod
@@ -254,7 +254,7 @@ class RESTclient():
         return key_values
 
     def discover_retries(self):
-        """ append all retry methods with their arguments discovered within self to the retries list in self
+        """ append retry methods and arguments discovered within self to self.retries
         """
         retry_methods = self.get_retry_methods()
         for retry_method in retry_methods:
@@ -269,13 +269,13 @@ class RESTclient():
             self.retries.append(retry_key_values)
 
     def decorate_retries(self):
-        """ decorate request methods with retry decorator where kwargs specified in retries list
-            retry kwargs must conform to prescribed retry arguments, see: https://pypi.org/project/retrying/
+        """ decorate request methods with retry decorator specefied in self.retries
+            self.retries arguments must adhere to retry arguments, see: https://pypi.org/project/retrying/
         """
         self.discover_retries()
-        logger.debug('adding retry decorators to all request methods')
         for retry_kwargs in self.retries:
-            RESTclient.log_retry_kwargs(retry_kwargs)
+            loggable_retry_kwargs = RESTclient.get_loggable_kwargs(retry_kwargs)
+            logger.debug(f'adding retry decorator to all request methods:\n{loggable_retry_kwargs}')
             self.get = retry(**retry_kwargs)(self.get)
             self.post = retry(**retry_kwargs)(self.post)
             self.put = retry(**retry_kwargs)(self.put)
@@ -307,14 +307,13 @@ class RESTclient():
         return scrubbed
 
     @staticmethod
-    def log_retry_kwargs(kwargs):
-        """ log retry kwargs parameters
+    def get_loggable_kwargs(kwargs):
+        """ return copy of kwargs that can be logged (serializable)
         """
         kwargs_copy = copy.deepcopy(kwargs)
         for key, value in kwargs.items():
             if callable(value):
                 kwargs_copy[key] = value.__name__
-        data = json.dumps(kwargs_copy, indent=2)
-        logger.debug(f"\n{data}")
+        return json.dumps(kwargs_copy, indent=2)
 
     request_handler = staticmethod(request_handler)

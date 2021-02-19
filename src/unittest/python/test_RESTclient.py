@@ -22,6 +22,7 @@ from mock import Mock
 from rest3client import RESTclient
 
 import sys
+import json
 import logging
 logger = logging.getLogger(__name__)
 
@@ -626,7 +627,7 @@ class TestRESTclient(unittest.TestCase):
         result = client.get_error_message(response_mock)
         self.assertEqual(result, response_mock.text)
 
-    @patch('rest3client.RESTclient.log_retry_kwargs')
+    @patch('rest3client.RESTclient.get_loggable_kwargs')
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.RESTclient.discover_retries')
     @patch('rest3client.restclient.retry')
@@ -647,11 +648,12 @@ class TestRESTclient(unittest.TestCase):
         self.assertTrue(retry_delete_call, retry_patch.mock_calls)
 
     @patch('rest3client.restclient.logger')
-    def test__log_retry_kwargs_Should_CallExpected_When_Called(self, logger_patch, *patches):
+    def test__get_loggable_kwargs_Should_CallExpected_When_Called(self, logger_patch, *patches):
         function_mock = Mock(__name__='function1')
         kwargs = {'key1': 'val1', 'function': function_mock}
-        RESTclient.log_retry_kwargs(kwargs)
-        logger_patch.debug.assert_called_once()
+        result = RESTclient.get_loggable_kwargs(kwargs)
+        expected_result = {'key1': 'val1', 'function': 'function1'}
+        self.assertEqual(result, json.dumps(expected_result, indent=2))
 
     @patch('rest3client.RESTclient.retry_type2_error', create=True)
     @patch('rest3client.RESTclient.retry_type1_error', create=True)
