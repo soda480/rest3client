@@ -13,14 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-rest3client is an abstraction of the HTTP requests library (https://pypi.org/project/requests/) providing a simpler interface to enable consumption of HTTP REST APIs.
-
-The library further abstracts the underlying requests methods providing HTTP verb equivalent methods for GET, POST, PATCH, PUT and DELETE. The library includes a RESTclient class that implements a consistent approach for processing request responses, extracting error messages from responses, providing standard headers to request methods, and enabling request resiliency through integration with the retrying library. The abstraction enables the consumer to focus on their business logic and less on the complexites of setting up requests and processing request responses.
-
-A subclass inheriting RESTclient can override the base methods providing further customization and flexibility including the ability to automatically retry on exceptions.
-"""
-
 from pybuilder.core import use_plugin
 from pybuilder.core import init
 from pybuilder.core import Author
@@ -38,7 +30,7 @@ name = 'rest3client'
 authors = [
     Author('Emilio Reyes', 'emilio.reyes@intel.com')
 ]
-summary = 'An abstraction of the requests library providing a simpler interface to enable consumption of HTTP REST APIs'
+summary = 'An abstraction of the requests library providing a simpler API for consuming HTTP REST APIs'
 url = 'https://github.com/soda480/rest3client'
 version = '0.3.1'
 default_task = [
@@ -48,7 +40,7 @@ default_task = [
     'package'
 ]
 license = 'Apache License, Version 2.0'
-description = __doc__
+description = summary
 
 
 @init
@@ -63,6 +55,9 @@ def set_properties(project):
     project.set_property('flake8_ignore', 'E501, W503, F401')
     project.build_depends_on_requirements('requirements-build.txt')
     project.depends_on_requirements('requirements.txt')
+    project.set_property('distutils_readme_description', True)
+    project.set_property('distutils_description_overwrite', True)
+    project.set_property('distutils_upload_skip_existing', True)
     project.set_property('distutils_console_scripts',
         ['rest = rest3client.rest:main'])
     project.set_property('distutils_classifiers', [
