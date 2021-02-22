@@ -5,9 +5,9 @@
 
 # rest3client #
 
-rest3client is an abstraction of the HTTP requests library (https://pypi.org/project/requests/) providing a simpler interface to enable consumption of HTTP REST APIs.
+rest3client is an abstraction of the HTTP requests library (https://pypi.org/project/requests/) providing a simpler API for consuming HTTP REST APIs.
 
-The library further abstracts the underlying HTTP requests methods providing equivalent methods for GET, POST, PATCH, PUT and DELETE. The library includes a RESTclient class that implements a consistent approach for processing request responses, extracting error messages from responses, providing standard headers to request methods, and enabling request resiliency through integration with the retrying library. The abstraction enables the consumer to focus on their business logic and less on the complexites of setting up requests and processing request responses.
+The library further abstracts the underlying HTTP requests methods providing equivalent methods for GET, POST, PATCH, PUT and DELETE. The library includes a RESTclient class that implements a consistent approach for processing request responses, extracting error messages from responses, providing standard headers to request methods, and enabling resiliency through integration with the retrying library. The abstraction enables the consumer to focus on their business logic and less on the complexites of setting up requests and processing request responses.
 
 A subclass inheriting RESTclient can override the base methods providing further customization and flexibility including the ability to automatically retry on exceptions.
 
