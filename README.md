@@ -213,14 +213,7 @@ rest GET /rate_limit --raw
 
 ### Development ###
 
-Ensure the latest version of Docker is installed on your development server.
-
-Clone the repository:
-```bash
-cd
-git clone https://github.com/soda480/rest3client.git
-cd rest3client
-```
+Ensure the latest version of Docker is installed on your development server. Fork and clone the repository.
 
 Build the Docker image:
 ```sh
