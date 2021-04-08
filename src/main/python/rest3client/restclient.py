@@ -41,7 +41,9 @@ class RESTclient():
         'x-api-key',
         'Password',
         'password',
-        'JWT'
+        'JWT',
+        'Token',
+        'token'
     ]
 
     def __init__(self, hostname, **kwargs):
@@ -60,6 +62,8 @@ class RESTclient():
         self.api_key = kwargs.get('api_key')
 
         self.bearer_token = kwargs.get('bearer_token')
+
+        self.token = kwargs.get('token')
 
         self.jwt = kwargs.get('jwt')
 
@@ -89,6 +93,9 @@ class RESTclient():
 
         if self.bearer_token:
             headers['Authorization'] = f'Bearer {self.bearer_token}'
+
+        if self.token:
+            headers['Authorization'] = self.token
 
         if self.jwt:
             headers['Authorization'] = f'JWT {self.jwt}'
