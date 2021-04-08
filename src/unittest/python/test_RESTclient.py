@@ -147,6 +147,16 @@ class TestRESTclient(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     @patch('rest3client.restclient.os.access')
+    def test__get_headers_Should_ReturnHeaders_When_Token(self, *patches):
+        client = RESTclient('api.name.com', token='token')
+        result = client.get_headers()
+        expected_result = {
+            'Content-Type': 'application/json',
+            'Authorization': 'token'
+        }
+        self.assertEqual(result, expected_result)
+
+    @patch('rest3client.restclient.os.access')
     def test__get_headers_Should_ReturnHeaders_When_JWT(self, *patches):
         client = RESTclient('api.name.com', jwt='jwtoken')
         result = client.get_headers()
@@ -573,7 +583,7 @@ class TestRESTclient(unittest.TestCase):
         }
         self.assertEqual(result, expected_result)
 
-    def test__redact_Should_Redact_When_List(self, *patches):
+    def test__redact_Should_Redact_When_ListOfPasswordsAndTokens(self, *patches):
         headers = {
             'headers': {
                 'Content-Type': 'application/json',
@@ -588,6 +598,12 @@ class TestRESTclient(unittest.TestCase):
                 }, {
                     'userName': 'some user2',
                     'Password': 'some password'
+                }, {
+                    'User': 'some user3',
+                    'Token': 'some token3'
+                }, {
+                    'User': 'some user4',
+                    'token': 'some token4'
                 }
             ]
         }
@@ -605,6 +621,12 @@ class TestRESTclient(unittest.TestCase):
                 }, {
                     'userName': 'some user2',
                     'Password': '[REDACTED]'
+                }, {
+                    'User': 'some user3',
+                    'Token': '[REDACTED]'
+                }, {
+                    'User': 'some user4',
+                    'token': '[REDACTED]'
                 }
             ]
         }

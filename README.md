@@ -17,7 +17,8 @@ The library supports most popular authentication schemes:
 - No authentication
 - Basic authentication
 - API Key-based authentication
-- Token-based authentication
+- Bearer token authentication
+- Token authentication
 - Certificate-based authentication
 - JWT authentication
 
@@ -41,8 +42,11 @@ The examples below show how RESTclient can be used to consume the GitHub REST AP
 # basic authentication
 >>> client = RESTclient('my-api.my-company.com', username='--my-user--', password='--my-password--')
 
-# token-based authentication
+# bearer token authentication
 >>> client = RESTclient('api.github.com', bearer_token='--my-token--')
+
+# token authentication
+>>> client = RESTclient('codecov.io', token='--my-token--')
 
 # certificate-based authentication
 >>> client = RESTclient('my-api.my-company.com', certfile='/path/to/my-certificate.pem', certpass='--my-certificate-password--')
@@ -169,9 +173,14 @@ To set the web address of the API:
 export R3C_ADDRESS=my-api.my-company.com
 ```
 
-For token-based authentication:
+For bearer token authentication:
 ```bash
 export R3C_BEARER_TOKEN=--my-token--
+```
+
+For token authentication:
+```bash
+export R3C_TOKEN=--my-token--
 ```
 
 For basic authentication:
