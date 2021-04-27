@@ -91,6 +91,12 @@ The examples below show how RESTclient can be used to consume the GitHub REST AP
 >>> client.delete('/repos/soda480/test-repo1')
 ```
 
+`HEAD` request
+```python
+>>> response = client.head('/user/repos', raw_response=True)
+>>> response.headers
+```
+
 #### Retries
 Add support for retry using the `retrying` library: https://pypi.org/project/retrying/
 

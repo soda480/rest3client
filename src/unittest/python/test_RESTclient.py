@@ -430,6 +430,19 @@ class TestRESTclient(unittest.TestCase):
 
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.restclient.requests.Session')
+    def test__head_Should_CallRequestsHead_When_Called(self, *patches):
+        client = RESTclient('api.name.com')
+        client.head('/rest/endpoint')
+        requests_head_call = call(
+            'head',
+            'https://api.name.com/rest/endpoint',
+            headers={
+                'Content-Type': 'application/json'},
+            verify=client.cabundle)
+        self.assertTrue(requests_head_call in client.session.request.mock_calls)
+
+    @patch('rest3client.restclient.os.access')
+    @patch('rest3client.restclient.requests.Session')
     def test__delete_Should_CallRequestsDelete_When_Called(self, *patches):
         client = RESTclient('api.name.com')
         client.delete('/rest/endpoint')
