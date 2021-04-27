@@ -21,6 +21,7 @@ import logging
 import base64
 import requests
 from collections.abc import Iterable
+from functools import wraps
 
 from rest3client.ssladapter import SSLAdapter
 from retrying import retry
@@ -178,6 +179,7 @@ class RESTclient():
     def request_handler(function):
         """ decorator to process arguments and response for request method
         """
+        @wraps(function)
         def _request_handler(self, endpoint, **kwargs):
             """ decorator method to prepare and handle requests and responses
             """
@@ -188,7 +190,6 @@ class RESTclient():
                 return
             response = function(self, endpoint, **arguments)
             return self.get_response(response, **kwargs)
-
         return _request_handler
 
     @request_handler
@@ -220,6 +221,12 @@ class RESTclient():
         """ helper method to submit patch requests
         """
         return self.session.request('patch', kwargs.pop('address'), **kwargs)
+
+    @request_handler
+    def head(self, endpoint, **kwargs):
+        """ helper method to submit head requests
+        """
+        return self.session.request('head', kwargs.pop('address'), **kwargs)
 
     def get_retry_methods(self):
         """ return list of retry_ methods found in self
