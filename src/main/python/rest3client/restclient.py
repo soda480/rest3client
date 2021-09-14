@@ -54,8 +54,7 @@ class RESTclient():
         self.hostname = hostname
         self.session = requests.Session()
 
-        cabundle = kwargs.get('cabundle', RESTclient.cabundle)
-        self.cabundle = cabundle if os.access(cabundle, os.R_OK) else False
+        self.cabundle = RESTclient.get_cabundle(kwargs.get('cabundle'))
 
         self.username = kwargs.get('username')
         self.password = kwargs.get('password')
@@ -329,5 +328,18 @@ class RESTclient():
             if callable(value):
                 kwargs_copy[key] = value.__name__
         return json.dumps(kwargs_copy, indent=2)
+
+    @staticmethod
+    def get_cabundle(cabundle):
+        """ return value for cabundle
+        """
+        if not cabundle:
+            cabundle = os.getenv('REQUESTS_CA_BUNDLE', RESTclient.cabundle)
+
+        if not os.access(cabundle, os.R_OK):
+            logger.warn(f'cabundle "{cabundle}" is not accessible')
+            cabundle = False
+
+        return cabundle
 
     request_handler = staticmethod(request_handler)
