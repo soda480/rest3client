@@ -30,7 +30,7 @@ name = 'rest3client'
 authors = [Author('Emilio Reyes', 'emilio.reyes@intel.com')]
 summary = 'An abstraction of the requests library providing a simpler API for consuming HTTP REST APIs'
 url = 'https://github.com/soda480/rest3client'
-version = '0.3.4'
+version = '0.3.5'
 default_task = [
     'clean',
     'analyze',

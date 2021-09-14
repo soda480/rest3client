@@ -55,14 +55,6 @@ class TestRESTclient(unittest.TestCase):
         self.assertEqual(client.cabundle, cabundle)
 
     @patch('rest3client.restclient.os.access', return_value=False)
-    def test__init__Should_SetAttributes_When_CabundleDoesNotExist(self, *patches):
-        hostname = 'api.name.com'
-        cabundle = 'cabundle'
-        client = RESTclient(hostname, cabundle=cabundle)
-        self.assertEqual(client.hostname, hostname)
-        self.assertFalse(client.cabundle)
-
-    @patch('rest3client.restclient.os.access', return_value=False)
     def test__init__Should_SetAttributes_When_ApiKey(self, *patches):
         hostname = 'api.name.com'
         cabundle = 'cabundle'
@@ -815,3 +807,28 @@ class TestRESTclient(unittest.TestCase):
             'stop_max_attempt_number': 60
         }
         self.assertEqual(key_values, expected_result)
+
+    @patch('rest3client.restclient.os.access', return_value=True)
+    def test__get_cabundle_Should_ReturnExpected_When_CabundleArgAndAccessible(self, *patches):
+        cabundle = '--cabundle--'
+        result = RESTclient.get_cabundle(cabundle)
+        self.assertEqual(result, cabundle)
+
+    @patch('rest3client.restclient.os.getenv', return_value='--cabundle--')
+    @patch('rest3client.restclient.os.access', return_value=True)
+    def test__get_cabundle_Should_ReturnExpected_When_NoCabundleArgAndAccessible(self, *patches):
+        result = RESTclient.get_cabundle(None)
+        self.assertEqual(result, '--cabundle--')
+
+    @patch('rest3client.restclient.os.access', return_value=True)
+    def test__get_cabundle_Should_ReturnDefault_When_NoCabundleArgAndAccessible(self, *patches):
+        result = RESTclient.get_cabundle(None)
+        self.assertEqual(result, RESTclient.cabundle)
+
+    @patch('rest3client.restclient.os.getenv', return_value='--cabundle--')
+    @patch('rest3client.restclient.os.access', return_value=False)
+    @patch('rest3client.restclient.logger')
+    def test__get_cabundle_Should_ReturnFalse_When_NoCabundleArgAndNotAccessible(self, logger_patch, *patches):
+        result = RESTclient.get_cabundle(None)
+        self.assertFalse(result)
+        logger_patch.warn.assert_called_once()
