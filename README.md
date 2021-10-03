@@ -250,7 +250,7 @@ docker container run \
 -e https_proxy \
 -v $PWD:/code \
 rest3client:latest \
-/bin/sh
+/bin/bash
 ```
 
 Execute the build:
