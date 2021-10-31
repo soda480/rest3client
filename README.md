@@ -248,7 +248,7 @@ docker container run \
 -it \
 -e http_proxy \
 -e https_proxy \
--v $PWD:/code \
+-v $PWD:/home/python/code \
 rest3client:latest \
 /bin/bash
 ```
