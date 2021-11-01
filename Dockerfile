@@ -15,13 +15,20 @@
 #
 FROM python:3.9-slim AS build-image
 ENV PYTHONDONTWRITEBYTECODE 1
-WORKDIR /code
-COPY . /code/
-RUN pip install pybuilder
+ENV PATH="/home/python/.local/bin:${PATH}"
+RUN groupadd -g 1000 python && useradd -u 1000 -d /home/python -m -g python python
+WORKDIR /home/python/code
+COPY . /home/python/code
+RUN chown -R python:python /home/python/code/
+USER python
+RUN pip install --disable-pip-version-check pybuilder
 RUN pyb install
 
 FROM python:3.9-alpine
 ENV PYTHONDONTWRITEBYTECODE 1
-WORKDIR /opt/rest3client
-COPY --from=build-image /code/target/dist/rest3client-*/dist/rest3client-*.tar.gz /opt/rest3client
-RUN pip install rest3client-*.tar.gz
+ENV PATH="/home/python/.local/bin:${PATH}"
+RUN addgroup -g 1000 python && adduser -u 1000 -h /home/python -D -G python python
+WORKDIR /home/python/
+USER python
+COPY --from=build-image /home/python/code/target/dist/rest3client-*/dist/rest3client-*.tar.gz .
+RUN pip install --disable-pip-version-check rest3client-*.tar.gz
