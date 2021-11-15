@@ -18,8 +18,7 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PATH="/home/python/.local/bin:${PATH}"
 RUN groupadd -g 1000 python && useradd -u 1000 -d /home/python -m -g python python
 WORKDIR /home/python/code
-COPY . /home/python/code
-RUN chown -R python:python /home/python/code/
+COPY --chown=python:python . /home/python/code
 USER python
 RUN pip install --disable-pip-version-check pybuilder
 RUN pyb install
