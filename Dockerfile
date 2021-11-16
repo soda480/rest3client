@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-FROM amr-cache-registry.caas.intel.com/cache/library/python:3.9-slim AS build-image
+FROM python:3.9-slim AS build-image
 ARG UID=1213
 ARG GID=1213
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -26,7 +26,7 @@ USER python
 RUN pip install --disable-pip-version-check pybuilder
 RUN pyb install
 
-FROM amr-cache-registry.caas.intel.com/cache/library/python:3.9-alpine
+FROM python:3.9-alpine
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PATH="/home/python/.local/bin:${PATH}"
 RUN addgroup -g 1213 python && adduser -u 1213 -h /home/python -D -G python python
