@@ -237,6 +237,8 @@ docker image build \
 --target build-image \
 --build-arg http_proxy \
 --build-arg https_proxy \
+--build-arg UID=$(id -u) \
+--build-arg GID=$(id -g) \
 -t \
 rest3client:latest .
 ```

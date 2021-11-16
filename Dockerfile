@@ -13,20 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-FROM python:3.9-slim AS build-image
+FROM amr-cache-registry.caas.intel.com/cache/library/python:3.9-slim AS build-image
+ARG UID=1213
+ARG GID=1213
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PATH="/home/python/.local/bin:${PATH}"
-RUN groupadd -g 1000 python && useradd -u 1000 -d /home/python -m -g python python
+RUN groupadd -g $GID python && useradd -u $UID -d /home/python -m -g python python
 WORKDIR /home/python/code
-COPY --chown=python:python . /home/python/code
+COPY . .
+RUN chown -R python:python .
 USER python
 RUN pip install --disable-pip-version-check pybuilder
 RUN pyb install
 
-FROM python:3.9-alpine
+FROM amr-cache-registry.caas.intel.com/cache/library/python:3.9-alpine
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PATH="/home/python/.local/bin:${PATH}"
-RUN addgroup -g 1000 python && adduser -u 1000 -h /home/python -D -G python python
+RUN addgroup -g 1213 python && adduser -u 1213 -h /home/python -D -G python python
 WORKDIR /home/python/
 USER python
 COPY --from=build-image /home/python/code/target/dist/rest3client-*/dist/rest3client-*.tar.gz .
