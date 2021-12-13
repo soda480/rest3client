@@ -8,7 +8,7 @@
 
 rest3client is an abstraction of the HTTP requests library (https://pypi.org/project/requests/) providing a simpler API for consuming HTTP REST APIs.
 
-The library further abstracts the underlying HTTP requests methods providing equivalent methods for GET, POST, PATCH, PUT and DELETE. The library includes a RESTclient class that implements a consistent approach for processing request responses, extracting error messages from responses, providing standard headers to request methods, and enabling resiliency through integration with the retrying library. The abstraction enables the consumer to focus on their business logic and less on the complexites of setting up requests and processing request responses.
+The library further abstracts the underlying HTTP requests methods providing equivalent methods for GET, POST, PATCH, PUT and DELETE. The library includes a RESTclient class that implements a consistent approach for processing request responses, extracting error messages from responses, providing standard headers to request methods, and enabling resiliency through integration with the retrying library. It also supports paging for REST APIs that leverage link headers. The abstraction enables the consumer to focus on their business logic and less on the complexites of setting up requests and processing request responses.
 
 A subclass inheriting RESTclient can override the base methods providing further customization and flexibility including the ability to automatically retry on exceptions.
 
@@ -72,7 +72,7 @@ The examples below show how RESTclient can be used to consume the GitHub REST AP
 >>> client.post('/user/repos', json={'name': 'test-repo1'})['full_name']
 'soda480/test-repo1'
 
->>> client.post('/repos/soda480/test-repo1/labels', json={'name': 'label1', 'color': '#006b75'})['url']
+>>> client.post('/repos/soda480/test-repo1/labels', json={'name': 'label1'})['url']
 'https://api.github.com/repos/soda480/test-repo1/labels/label1'
 ```
 
@@ -97,6 +97,23 @@ The examples below show how RESTclient can be used to consume the GitHub REST AP
 >>> response = client.head('/user/repos', raw_response=True)
 >>> response.headers
 ```
+
+#### Paging
+Paging is provided for REST APIs that make use of [link headers](https://docs.python-requests.org/en/latest/user/advanced/#link-headers).
+
+`GET all` directive - Get all pages from an endpoint and return list containing only matching attributes
+```python
+for repo in client.get('/orgs/edgexfoundry/repos', _get='all', _attributes=['full_name']):
+    print(repo['full_name'])
+```
+
+`GET page` directive - Yield a page from endpoint
+```python
+for page in client.get('/user/repos', _get='page'):
+    for repo in page:
+        print(repo['full_name'])
+```
+
 
 #### Retries
 Add support for retry using the `retrying` library: https://pypi.org/project/retrying/
@@ -237,8 +254,6 @@ docker image build \
 --target build-image \
 --build-arg http_proxy \
 --build-arg https_proxy \
---build-arg UID=$(id -u) \
---build-arg GID=$(id -g) \
 -t \
 rest3client:latest .
 ```
@@ -250,7 +265,7 @@ docker container run \
 -it \
 -e http_proxy \
 -e https_proxy \
--v $PWD:/home/python/code \
+-v $PWD:/code \
 rest3client:latest \
 /bin/bash
 ```
