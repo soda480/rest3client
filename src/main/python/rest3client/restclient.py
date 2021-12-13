@@ -191,23 +191,103 @@ class RESTclient():
             return self.get_response(response, **kwargs)
         return _request_handler
 
+    def _get_endpoint_from_url(self, url):
+        """ return endpoint from url
+        """
+        return url.replace(f'https://{self.hostname}', '')
+
+    def _get_next_endpoint(self, url):
+        """ return next endpoint
+        """
+        if not url:
+            logger.debug('link header is empty')
+            return
+        endpoint = self._get_endpoint_from_url(url)
+        logger.debug(f'next endpoint is: {endpoint}')
+        return endpoint
+
+    def _page(self, function, endpoint, **kwargs):
+        """ return generator that yields pages from endpoint
+        """
+        while True:
+            response = function(self, endpoint, raw_response=True, **kwargs)
+            yield response.json()
+            endpoint = self._get_next_endpoint(response.links.get('next', {}).get('url'))
+            if not endpoint:
+                logger.debug('no more pages')
+                break
+
+    def _all(self, function, endpoint, **kwargs):
+        """ return all pages from endpoint
+        """
+        logger.debug(f'get items from: {endpoint}')
+        items = []
+        while True:
+            url = None
+            response = function(self, endpoint, raw_response=True, **kwargs)
+            if response:
+                data = response.json()
+                if isinstance(data, list):
+                    items.extend(response.json())
+                else:
+                    items.append(data)
+                url = response.links.get('next', {}).get('url')
+            endpoint = self._get_next_endpoint(url)
+            if not endpoint:
+                logger.debug('no more pages to retrieve')
+                break
+        return items
+
+    def page_handler(function):
+        """ decorator to process paging
+        """
+        @wraps(function)
+        def _page_handler(self, endpoint, **kwargs):
+            """ inner decorator to process paging
+            """
+            private_method = getattr(RESTclient, f'_{function.__name__}', None)
+            if not private_method:
+                raise ValueError('page_handler must decorate a method that has an associated private method')
+            directive = kwargs.pop(f'_{function.__name__}', None)
+            if directive == 'all':
+                attributes = kwargs.pop('_attributes', None)
+                items = self._all(private_method, endpoint, **kwargs)
+                return RESTclient.match_keys(items, attributes)
+            elif directive == 'page':
+                return self._page(private_method, endpoint, **kwargs)
+            else:
+                return private_method(self, endpoint, **kwargs)
+        return _page_handler
+
     @request_handler
-    def post(self, endpoint, **kwargs):
+    def _get(self, endpoint, **kwargs):
+        """ helper method to submit get requests
+        """
+        return self.session.request('get', kwargs.pop('address'), **kwargs)
+
+    @request_handler
+    def _post(self, endpoint, **kwargs):
         """ helper method to submit post requests
         """
         return self.session.request('post', kwargs.pop('address'), **kwargs)
+
+    @page_handler
+    def get(self, endpoint, **kwargs):
+        """ helper method to handle paged get requests
+        """
+        pass  # pragma: no cover
+
+    @page_handler
+    def post(self, endpoint, **kwargs):
+        """ helper method to handle paged post requests
+        """
+        pass  # pragma: no cover
 
     @request_handler
     def put(self, endpoint, **kwargs):
         """ helper method to submit put requests
         """
         return self.session.request('put', kwargs.pop('address'), **kwargs)
-
-    @request_handler
-    def get(self, endpoint, **kwargs):
-        """ helper method to submit get requests
-        """
-        return self.session.request('get', kwargs.pop('address'), **kwargs)
 
     @request_handler
     def delete(self, endpoint, **kwargs):
@@ -342,4 +422,18 @@ class RESTclient():
 
         return cabundle
 
+    @staticmethod
+    def match_keys(items, attributes):
+        """ return list of items with matching keys from list of attributes
+        """
+        if not attributes:
+            return items
+        matched_items = []
+        for item in items:
+            matched_items.append({
+                key: item[key] for key in attributes if key in item
+            })
+        return matched_items
+
+    page_handler = staticmethod(page_handler)
     request_handler = staticmethod(request_handler)

@@ -39,7 +39,29 @@ class TestRESTclient(unittest.TestCase):
     def setUp(self):
         """
         """
-        pass
+        self.items = [
+            {
+                'name': 'name1-mid-last1',
+                'key1': 'value1',
+                'key2': 'value2',
+                'key3': 'value3'
+            }, {
+                'name': 'name2-mid-last2',
+                'key1': 'value1',
+                'key2': 'value2',
+                'key3': 'value3.2'
+            }, {
+                'name': 'name3-med-last3',
+                'key1': 'value1',
+                'key2': 'value2',
+                'key3': 'value3'
+            }, {
+                'name': 'name4-mid-last4',
+                'key1': 'value1',
+                'key2': 'value2',
+                'key3': 'value3'
+            }
+        ]
 
     def tearDown(self):
         """
@@ -354,7 +376,7 @@ class TestRESTclient(unittest.TestCase):
     @patch('rest3client.restclient.requests.Session')
     def test__get_Should_CallRequestsGet_When_Called(self, *patches):
         client = RESTclient('api.name.com')
-        client.get('/rest/endpoint')
+        client._get('/rest/endpoint')
         requests_get_call = call(
             'get',
             'https://api.name.com/rest/endpoint',
@@ -370,7 +392,7 @@ class TestRESTclient(unittest.TestCase):
         requests_data = {
             'arg1': 'val1',
             'arg2': 'val2'}
-        client.post('/rest/endpoint', json=requests_data)
+        client._post('/rest/endpoint', json=requests_data)
         requests_post_call = call(
             'post',
             'https://api.name.com/rest/endpoint',
@@ -832,3 +854,182 @@ class TestRESTclient(unittest.TestCase):
         result = RESTclient.get_cabundle(None)
         self.assertFalse(result)
         logger_patch.warn.assert_called_once()
+
+    def test__get_endpoint_from_url_Should_ReturnExpected_When_Called(self, *patches):
+        client = RESTclient('api.name.com')
+        result = client._get_endpoint_from_url('https://api.name.com/user/repos?page=2')
+        expected_result = '/user/repos?page=2'
+        self.assertEqual(result, expected_result)
+
+    def test__get_next_endpoint_Should_ReturnNone_When_NoLinkHeader(self, *patches):
+        client = RESTclient('api.name.com')
+        self.assertIsNone(client._get_next_endpoint(None))
+
+    def test__get_next_endpoint_Should_ReturnExpected_When_CalledWithNextEndpoint(self, *patches):
+        client = RESTclient('api.name.com')
+        link_header = 'https://api.name.com/organizations/27781926/repos?page=4'
+        result = client._get_next_endpoint(link_header)
+        expected_result = '/organizations/27781926/repos?page=4'
+        self.assertEqual(result, expected_result)
+
+    @patch('rest3client.RESTclient._get_next_endpoint')
+    @patch('rest3client.RESTclient._get')
+    def test__page_Should_ReturnExpected_When_Called(self, get_patch, get_next_endpoint_patch, *patches):
+        response_mock1 = Mock()
+        response_mock1.json.return_value = ['page1', 'page2']
+        response_mock2 = Mock()
+        response_mock2.json.return_value = ['page3', 'page4']
+        get_patch.side_effect = [response_mock1, response_mock2]
+        get_next_endpoint_patch.return_value = ['next-endpoint', 'next-endpoint', None]
+        client = RESTclient('api.name.com')
+        result = client._page(get_patch, 'endpoint')
+        self.assertEqual(next(result), ['page1', 'page2'])
+        self.assertEqual(next(result), ['page3', 'page4'])
+        # with self.assertRaises(StopIteration):
+        #     next(result)
+
+    @patch('rest3client.RESTclient._get_next_endpoint')
+    @patch('rest3client.RESTclient._get')
+    def test__page_Should_ReturnExpected_When_NoEndpoint(self, get_patch, get_next_endpoint_patch, *patches):
+        response_mock1 = Mock()
+        response_mock1.json.return_value = ['page1', 'page2']
+        get_patch.side_effect = [response_mock1]
+        get_next_endpoint_patch.side_effect = [None]
+        client = RESTclient('api.name.com')
+        result = client._page(get_patch, 'endpoint')
+        self.assertEqual(next(result), ['page1', 'page2'])
+        with self.assertRaises(StopIteration):
+            next(result)
+
+    @patch('rest3client.RESTclient._get_next_endpoint')
+    @patch('rest3client.RESTclient._get')
+    def test__all_Should_ReturnExpected_When_GetReturnsList(self, get_patch, get_next_endpoint_patch, *patches):
+        response_mock1 = Mock()
+        response_mock1.json.return_value = ['item1', 'item2']
+        response_mock2 = Mock()
+        response_mock2.json.return_value = ['item3', 'item4']
+        get_patch.side_effect = [
+            response_mock1,
+            response_mock2
+        ]
+        get_next_endpoint_patch.side_effect = [
+            {'Link': 'link-header-value'},
+            {}
+        ]
+        client = RESTclient('api.name.com')
+        result = client._all(get_patch, '/repos/edgexfoundry/cd-management/milestones')
+        expected_result = ['item1', 'item2', 'item3', 'item4']
+        self.assertEqual(result, expected_result)
+
+    @patch('rest3client.RESTclient._get_next_endpoint')
+    @patch('rest3client.RESTclient._get')
+    def test__all_Should_ReturnExpected_When_GetReturnsDict(self, get_patch, get_next_endpoint_patch, *patches):
+        response_mock1 = Mock()
+        response_mock1.json.return_value = {'key1': 'value1'}
+        response_mock2 = Mock()
+        response_mock2.json.return_value = {'key2': 'value2'}
+        get_patch.side_effect = [
+            response_mock1,
+            response_mock2
+        ]
+        get_next_endpoint_patch.side_effect = [
+            {'Link': 'link-header-value'},
+            {}
+        ]
+        client = RESTclient('api.name.com')
+        result = client._all(get_patch, '/repos/edgexfoundry/cd-management/milestones')
+        expected_result = [{'key1': 'value1'}, {'key2': 'value2'}]
+        self.assertEqual(result, expected_result)
+
+    @patch('rest3client.RESTclient._get_next_endpoint')
+    @patch('rest3client.RESTclient._get')
+    def test__all_Should_ReturnEmptyList_When_NoResponse(self, get_patch, get_next_endpoint_patch, *patches):
+        get_patch.side_effect = [
+            None
+        ]
+        get_next_endpoint_patch.side_effect = [
+            None
+        ]
+        client = RESTclient('api.name.com')
+        result = client._all(get_patch, '/repos/edgexfoundry/cd-management/milestones')
+        expected_result = []
+        self.assertEqual(result, expected_result)
+
+    @patch('rest3client.RESTclient._get')
+    @patch('rest3client.RESTclient.match_keys')
+    @patch('rest3client.RESTclient._all')
+    def test__page_handler_Should_CallExpected_When_AllDirective(self, all_patch, match_keys_patch, get_patch, *patches):
+        client = RESTclient('api.name.com')
+        mock_function = Mock(__name__='get')
+        decorated_function = RESTclient.page_handler(mock_function)
+        endpoint = '/rest/endpoint'
+        attributes = ['attr1', 'attr2']
+        result = decorated_function(client, endpoint, _get='all', _attributes=attributes)
+        all_patch.assert_called_once_with(get_patch, endpoint)
+        match_keys_patch.assert_called_once_with(all_patch.return_value, attributes)
+        self.assertEqual(result, match_keys_patch.return_value)
+
+    @patch('rest3client.RESTclient._get')
+    @patch('rest3client.RESTclient._page')
+    def test__page_handler_Should_CallExpected_When_PageDirective(self, page_patch, get_patch, *patches):
+        client = RESTclient('api.name.com')
+        mock_function = Mock(__name__='get')
+        decorated_function = RESTclient.page_handler(mock_function)
+        endpoint = '/rest/endpoint'
+        result = decorated_function(client, endpoint, _get='page')
+        page_patch.assert_called_once_with(get_patch, endpoint)
+        self.assertEqual(result, page_patch.return_value)
+
+    @patch('rest3client.RESTclient._get')
+    def test__page_handler_Should_CallExpected_When_NoDirective(self, get_patch, *patches):
+        client = RESTclient('api.name.com')
+        mock_function = Mock(__name__='get')
+        decorated_function = RESTclient.page_handler(mock_function)
+        endpoint = '/rest/endpoint'
+        result = decorated_function(client, endpoint, k1='v1', k2='v2')
+        get_patch.assert_called_once_with(client, endpoint, k1='v1', k2='v2')
+        self.assertEqual(result, get_patch.return_value)
+
+    @patch('rest3client.RESTclient._get')
+    def test__page_handler_Should_RaiseValueError_When_NoAssociatedMethod(self, get_patch, *patches):
+        client = RESTclient('api.name.com')
+        mock_function = Mock(__name__='does_not_exist')
+        decorated_function = RESTclient.page_handler(mock_function)
+        endpoint = '/rest/endpoint'
+        with self.assertRaises(ValueError):
+            decorated_function(client, endpoint, _get='page')
+
+    def test__match_keys_Should_Return_Items_When_NoAttributes(self, *patches):
+        result = RESTclient.match_keys(self.items, None)
+        self.assertEqual(result, self.items)
+
+    def test__match_keys_Should_ReturnExpected_When_Called(self, *patches):
+        result = RESTclient.match_keys(self.items, ['name', 'key1'])
+        expected_result = [
+            {
+                'name': 'name1-mid-last1',
+                'key1': 'value1'
+            }, {
+                'name': 'name2-mid-last2',
+                'key1': 'value1'
+            }, {
+                'name': 'name3-med-last3',
+                'key1': 'value1'
+            }, {
+                'name': 'name4-mid-last4',
+                'key1': 'value1'
+            }
+        ]
+        self.assertEqual(result, expected_result)
+
+    @patch('rest3client.RESTclient._get')
+    def test__get_Should_CallExpected_When_Called(self, get_patch, *patches):
+        client = RESTclient('api.name.com')
+        client.get('/rest/endpoint')
+        get_patch.assert_called()
+
+    @patch('rest3client.RESTclient._post')
+    def test__post_Should_CallExpected_When_Called(self, post_patch, *patches):
+        client = RESTclient('api.name.com')
+        client.post('/rest/endpoint', json={})
+        post_patch.assert_called()
