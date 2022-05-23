@@ -1,5 +1,7 @@
 name: build
 on:
+  schedule:
+  - cron: "0 8 * * *"
   push:
     branches:
       - '**'
@@ -9,25 +11,22 @@ on:
 jobs:
   build:
     runs-on: ubuntu-20.04
-    container: python:3.9-slim
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: Install pybuilder
-      run: pip install pybuilder
-
-    - name: Execute build
-      run: pyb
-
-    - name: Install Codecov requirements
+    - name: Build Docker image
       run: |
-        apt-get update
-        apt-get install -y bash curl
-        sed -e 's,filename="rest3client/,filename="src/main/python/rest3client/,g' target/reports/rest3client_coverage.xml > coverage.xml
+        docker image build --target build-image -t rest3client:latest .
+
+    - name: Prepare coverage
+      run: |
+        ID=$(docker create rest3client)
+        docker cp $ID:/code/target/reports/rest3client_coverage.xml rest3client_coverage.xml
+        sed -i -e 's,filename="rest3client/,filename="src/main/python/rest3client/,g' rest3client_coverage.xml
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: coverage.xml
+        file: rest3client_coverage.xml
