@@ -1,10 +1,10 @@
-# rest3client #
+# rest3client
 [![GitHub Workflow Status](https://github.com/soda480/rest3client/workflows/build/badge.svg)](https://github.com/soda480/rest3client/actions)
 [![Code Coverage](https://codecov.io/gh/soda480/rest3client/branch/master/graph/badge.svg)](https://codecov.io/gh/soda480/rest3client)
 [![Code Grade](https://api.codiga.io/project/12271/status/svg)](https://app.codiga.io/public/project/12271/rest3client/dashboard)
 [![vulnerabilities](https://img.shields.io/badge/vulnerabilities-None-brightgreen)](https://pypi.org/project/bandit/)
 [![PyPI version](https://badge.fury.io/py/rest3client.svg)](https://badge.fury.io/py/rest3client)
-[![python](https://img.shields.io/badge/python-3.9-teal)](https://www.python.org/downloads/)
+[![python](https://img.shields.io/badge/python-3.7%20%7C%203.8%20%7C%203.9%20%7C%203.10-teal)](https://www.python.org/downloads/)
 
 rest3client is an abstraction of the HTTP requests library (https://pypi.org/project/requests/) providing a simpler API for consuming HTTP REST APIs.
 
@@ -23,12 +23,12 @@ The library supports most popular authentication schemes:
 - Certificate-based authentication
 - JWT authentication
 
-### Installation ###
+### Installation
 ```bash
 pip install rest3client
 ```
 
-### API Usage ###
+### API Usage
 The examples below show how RESTclient can be used to consume the GitHub REST API. However RESTclient can be used to consume just about any REST API.
 
 ```python
@@ -158,7 +158,7 @@ export RETRY_CONNECTION_ERROR_WAIT_RANDOM_MAX = 15000
 #### Real Eamples
 See [GitHub3API](https://github.com/soda480/github3api) for an example of how RESTclient can be subclassed to provide further custom functionality for a specific REST API (including retry on exceptions). 
 
-### CLI Usage ###
+### CLI Usage
 RESTclient comes packaged with a command line interace (CLI) that can be used to consume REST APIs using the RESTclient class. To consume the CLI simply build and run the Docker container as described below, except when building the image exclude the `--target build-image` argument.
 ```bash
 usage: rest [-h] [--address ADDRESS] [--json JSON_DATA]
@@ -244,7 +244,7 @@ rest DELETE /repos/soda480/test-repo1 --debug
 rest GET /rate_limit --raw
 ```
 
-### Development ###
+### Development
 
 Ensure the latest version of Docker is installed on your development server. Fork and clone the repository.
 
@@ -267,7 +267,7 @@ docker container run \
 -e https_proxy \
 -v $PWD:/code \
 rest3client:latest \
-/bin/bash
+bash
 ```
 
 Execute the build:

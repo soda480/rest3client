@@ -13,14 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-FROM python:3.9-slim AS build-image
+ARG PYTHON_VERSION=3.9
+FROM python:${PYTHON_VERSION}-slim AS build-image
 ENV PYTHONDONTWRITEBYTECODE 1
 WORKDIR /code
 COPY . /code/
-RUN pip install pybuilder
-RUN pyb install
+RUN pip install --upgrade pip && pip install pybuilder
+RUN pyb -X && pyb install
 
-FROM python:3.9-alpine
+FROM python:${PYTHON_VERSION}-slim
 ENV PYTHONDONTWRITEBYTECODE 1
 WORKDIR /opt/rest3client
 COPY --from=build-image /code/target/dist/rest3client-*/dist/rest3client-*.tar.gz /opt/rest3client

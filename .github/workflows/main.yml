@@ -9,24 +9,48 @@ on:
     branches:
       - main
 jobs:
-  build:
+  build-images:
+    strategy:
+      matrix:
+        version: ['3.7', '3.8', '3.9', '3.10']
+    name: Build Python Docker images
     runs-on: ubuntu-20.04
-
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Build Docker image
-      run: |
-        docker image build --target build-image -t rest3client:latest .
-
-    - name: Prepare coverage
-      run: |
-        ID=$(docker create rest3client)
-        docker cp $ID:/code/target/reports/rest3client_coverage.xml rest3client_coverage.xml
-        sed -i -e 's,filename="rest3client/,filename="src/main/python/rest3client/,g' rest3client_coverage.xml
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        file: rest3client_coverage.xml
+      - uses: actions/checkout@v3
+      - name: build rest3client ${{ matrix.version }} image
+        run:
+          docker image build --target build-image --build-arg PYTHON_VERSION=${{ matrix.version }} -t rest3client:${{ matrix.version }} .
+      - name: save rest3client ${{ matrix.version }} image
+        if: ${{ matrix.version == '3.9' }}
+        run: |
+          mkdir -p images
+          docker save --output images/rest3client-${{ matrix.version }}.tar rest3client:${{ matrix.version }}
+      - name: upload rest3client ${{ matrix.version }} image artifact
+        if: ${{ matrix.version == '3.9' }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: image
+          path: images/rest3client-${{ matrix.version }}.tar
+  coverage:
+    name: Publish Code Coverage Report
+    needs: build-images
+    runs-on: ubuntu-20.04
+    steps:
+      - name: download image artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: image
+          path: images/
+      - name: load image
+        run:
+          docker load --input images/rest3client-3.9.tar
+      - name: prepare report
+        run: |
+          ID=$(docker create rest3client:3.9)
+          docker cp $ID:/code/target/reports/rest3client_coverage.xml rest3client_coverage.xml
+          sed -i -e 's,filename="rest3client/,filename="src/main/python/rest3client/,g' rest3client_coverage.xml
+      - name: upload report
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: rest3client_coverage.xml
