@@ -157,6 +157,16 @@ export RETRY_CONNECTION_ERROR_WAIT_RANDOM_MIN = 5000
 export RETRY_CONNECTION_ERROR_WAIT_RANDOM_MAX = 15000
 ```
 
+#### Certificate Authority (CA) Bundle
+
+The `rest3client` module's default location for the CA Bundle is `/etc/ssl/certs/ca-certificates.crt`. This location can be overridden in two different ways:
+
+* setting the `REQUESTS_CA_BUNDLE` environment variable to the desired location
+* specifying the `cabundle` parameter to the RESTclient constructor:
+```Python
+client = RESTclient(bearer_token="--token--", cabundle='/location/to/your/cabundle')
+```
+
 #### Real Eamples
 See [GitHub3API](https://github.com/soda480/github3api) for an example of how RESTclient can be subclassed to provide further custom functionality for a specific REST API (including retry on exceptions). 
 
