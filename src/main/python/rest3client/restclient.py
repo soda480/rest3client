@@ -68,9 +68,10 @@ class RESTclient():
         self.jwt = kwargs.get('jwt')
 
         self.certfile = kwargs.get('certfile')
+        self.certkey = kwargs.get('certkey')
         self.certpass = kwargs.get('certpass')
-        if self.certfile and self.certpass:
-            ssl_adapter = SSLAdapter(certfile=self.certfile, certpass=self.certpass)
+        if self.certfile and (self.certkey or self.certpass):
+            ssl_adapter = SSLAdapter(certfile=self.certfile, certkey=self.certkey, certpass=self.certpass)
             self.session.mount(f'https://{self.hostname}', ssl_adapter)
 
         self.retries = kwargs.get('retries', [])

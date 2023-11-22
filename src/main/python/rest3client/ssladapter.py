@@ -26,10 +26,12 @@ class SSLAdapter(requests.adapters.HTTPAdapter):
 
     def __init__(self, *args, **kwargs):
         certfile = kwargs.pop('certfile')
-        certpass = str(kwargs.pop('certpass', ''))
+        certkey = kwargs.pop('certkey', None)
+        certpass = kwargs.pop('certpass', None)
         ssl_context = ssl.SSLContext()
-        ssl_context.load_cert_chain(certfile, password=certpass)
+        ssl_context.load_cert_chain(certfile, keyfile=certkey, password=certpass)
         self.ssl_context = ssl_context
+        logger.debug(f'loaded ssl context using certificate: {certfile}')
         super(SSLAdapter, self).__init__(*args, **kwargs)
 
     def init_poolmanager(self, *args, **kwargs):
