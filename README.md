@@ -3,7 +3,7 @@
 [![Code Coverage](https://codecov.io/gh/soda480/rest3client/branch/master/graph/badge.svg)](https://codecov.io/gh/soda480/rest3client)
 [![vulnerabilities](https://img.shields.io/badge/vulnerabilities-None-brightgreen)](https://pypi.org/project/bandit/)
 [![PyPI version](https://badge.fury.io/py/rest3client.svg)](https://badge.fury.io/py/rest3client)
-[![python](https://img.shields.io/badge/python-3.7%20%7C%203.8%20%7C%203.9%20%7C%203.10-teal)](https://www.python.org/downloads/)
+[![python](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-teal)](https://www.python.org/downloads/)
 
 rest3client is an abstraction of the HTTP requests library (https://pypi.org/project/requests/) providing a simpler API for consuming HTTP REST APIs.
 
@@ -48,8 +48,11 @@ The examples below show how RESTclient can be used to consume the GitHub REST AP
 # token authentication
 >>> client = RESTclient('codecov.io', token='--my-token--')
 
-# certificate-based authentication
+# certificate-based authentication using certificate and password
 >>> client = RESTclient('my-api.my-company.com', certfile='/path/to/my-certificate.pem', certpass='--my-certificate-password--')
+
+# certificate-based authentication using certificate and private key
+>>> client = RESTclient('my-api.my-company.com', certfile='/path/to/my-certificate.pem', certkey='/path/to/my-certificate-private.key')
 
 # jwt authentication
 >>> client = RESTclient('my-api.my-company.com', jwt='--my-jwt--')
@@ -152,6 +155,16 @@ You also have the option of overriding any of the retry argument with environmen
 ```bash
 export RETRY_CONNECTION_ERROR_WAIT_RANDOM_MIN = 5000
 export RETRY_CONNECTION_ERROR_WAIT_RANDOM_MAX = 15000
+```
+
+#### Certificate Authority (CA) Bundle
+
+The `rest3client` module's default location for the CA Bundle is `/etc/ssl/certs/ca-certificates.crt`. This location can be overridden in two different ways:
+
+* setting the `REQUESTS_CA_BUNDLE` environment variable to the desired location
+* specifying the `cabundle` parameter to the RESTclient constructor:
+```Python
+client = RESTclient(bearer_token="--token--", cabundle='/location/to/your/cabundle')
 ```
 
 #### Real Eamples

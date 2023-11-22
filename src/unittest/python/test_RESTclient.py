@@ -119,7 +119,20 @@ class TestRESTclient(unittest.TestCase):
         certfile = '--certfile--'
         certpass = '--certpass--'
         client = RESTclient('api.name.com', certfile=certfile, certpass=certpass)
-        ssl_adapter_patch.assert_called_once_with(certfile=certfile, certpass=certpass)
+        ssl_adapter_patch.assert_called_once_with(certfile=certfile, certkey=None, certpass=certpass)
+        client.session.mount.assert_called_once_with(f'https://{hostname}', ssl_adapter_patch.return_value)
+
+    @patch('rest3client.restclient.os.access')
+    @patch('rest3client.restclient.SSLAdapter')
+    @patch('rest3client.restclient.requests.Session')
+    def test__init_Should_InstantiateSslAdapterAndMountSslAdapterToSession_When_CertfileCertkey(self, session_patch, ssl_adapter_patch, *patches):
+        session_mock = Mock()
+        session_patch.return_value = session_mock
+        hostname = 'api.name.com'
+        certfile = '--certfile--'
+        certkey = '--certkey--'
+        client = RESTclient('api.name.com', certfile=certfile, certkey=certkey)
+        ssl_adapter_patch.assert_called_once_with(certfile=certfile, certkey=certkey, certpass=None)
         client.session.mount.assert_called_once_with(f'https://{hostname}', ssl_adapter_patch.return_value)
 
     @patch('rest3client.restclient.os.access', return_value=False)

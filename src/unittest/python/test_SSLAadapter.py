@@ -38,11 +38,19 @@ class TestSSLAdapter(unittest.TestCase):
         pass
 
     @patch('rest3client.ssladapter.ssl.SSLContext')
-    def test__init__Should_SetAttributes_When_Called(self, ssl_context_patch, *patches):
+    def test__init__Should_SetAttributes_When_Certpass(self, ssl_context_patch, *patches):
         ssl_context_mock = Mock()
         ssl_context_patch.return_value = ssl_context_mock
         adapter = SSLAdapter(certfile='-certfile-', certpass='-certpass-')
-        ssl_context_mock.load_cert_chain.assert_called_once_with('-certfile-', password='-certpass-')
+        ssl_context_mock.load_cert_chain.assert_called_once_with('-certfile-', keyfile=None, password='-certpass-')
+        self.assertEqual(adapter.ssl_context, ssl_context_mock)
+
+    @patch('rest3client.ssladapter.ssl.SSLContext')
+    def test__init__Should_SetAttributes_When_Certkey(self, ssl_context_patch, *patches):
+        ssl_context_mock = Mock()
+        ssl_context_patch.return_value = ssl_context_mock
+        adapter = SSLAdapter(certfile='-certfile-', certkey='-certkey-')
+        ssl_context_mock.load_cert_chain.assert_called_once_with('-certfile-', keyfile='-certkey-', password=None)
         self.assertEqual(adapter.ssl_context, ssl_context_mock)
 
     @patch('rest3client.ssladapter.requests.adapters.HTTPAdapter.init_poolmanager')
