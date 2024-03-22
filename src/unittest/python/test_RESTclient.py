@@ -204,7 +204,6 @@ class TestRESTclient(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     @patch('rest3client.restclient.os.access')
-    @patch('rest3client.RESTclient.redact')
     @patch('rest3client.restclient.json.dumps')
     @patch('rest3client.restclient.logger')
     def test__log_request_Should_CallLogger_When_JsonSerializable(self, logger_patch, json_dumps_patch, *patches):
@@ -212,11 +211,11 @@ class TestRESTclient(unittest.TestCase):
             'address': '--address--',
             'data': 'data'
         }
-        function_name = 'GET'
+        function_name = '_GET'
         noop = False
         client = RESTclient('api.name.com', bearer_token='token')
         client.log_request(function_name, arguments, noop)
-        debug_call = call(f"\n{function_name}: {arguments['address']} NOOP: {noop}\n{json_dumps_patch.return_value}")
+        debug_call = call(f"\nGET: {arguments['address']}   NOOP: {noop}\n{json_dumps_patch.return_value}")
         self.assertTrue(debug_call in logger_patch.debug.mock_calls)
 
     @patch('rest3client.restclient.os.access')
@@ -385,20 +384,23 @@ class TestRESTclient(unittest.TestCase):
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.restclient.requests.Session')
     def test__get_Should_CallRequestsGet_When_Called(self, *patches):
-        client = RESTclient('api.name.com')
+        token = 'aksdfkjsddsecretedwxxcslsdfas'
+        client = RESTclient('api.name.com', token=token)
         client._get('/rest/endpoint')
         requests_get_call = call(
             'get',
             'https://api.name.com/rest/endpoint',
             headers={
-                'Content-Type': 'application/json'},
+                'Content-Type': 'application/json',
+                'Authorization': token},
             verify=client.cabundle)
         self.assertTrue(requests_get_call in client.session.request.mock_calls)
 
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.restclient.requests.Session')
     def test__post_Should_CallRequestsPost_When_Called(self, *patches):
-        client = RESTclient('api.name.com')
+        bearer_token = '--a-asdfasdfasdfasdf-here--'
+        client = RESTclient('api.name.com', bearer_token=bearer_token)
         requests_data = {
             'arg1': 'val1',
             'arg2': 'val2'}
@@ -407,7 +409,8 @@ class TestRESTclient(unittest.TestCase):
             'post',
             'https://api.name.com/rest/endpoint',
             headers={
-                'Content-Type': 'application/json'},
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {bearer_token}'},
             json={
                 'arg1': 'val1',
                 'arg2': 'val2'},
@@ -417,7 +420,8 @@ class TestRESTclient(unittest.TestCase):
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.restclient.requests.Session')
     def test__put_Should_CallRequestsPut_When_Called(self, *patches):
-        client = RESTclient('api.name.com')
+        jwtoken = '--a.dfgdfgdgsdfggfd.here--'
+        client = RESTclient('api.name.com', jwt=jwtoken)
         requests_data = {
             'arg1': 'val1',
             'arg2': 'val2'}
@@ -426,7 +430,8 @@ class TestRESTclient(unittest.TestCase):
             'put',
             'https://api.name.com/rest/endpoint',
             headers={
-                'Content-Type': 'application/json'},
+                'Content-Type': 'application/json',
+                'Authorization': f'JWT {jwtoken}'},
             json={
                 'arg1': 'val1',
                 'arg2': 'val2'},
@@ -436,7 +441,8 @@ class TestRESTclient(unittest.TestCase):
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.restclient.requests.Session')
     def test__patch_Should_CallRequestsPatch_When_Called(self, *patches):
-        client = RESTclient('api.name.com')
+        apikey = '--a-dfghdfghdfghdfghdfg-here--'
+        client = RESTclient('api.name.com', apikey=apikey)
         requests_data = {
             'arg1': 'val1',
             'arg2': 'val2'}
@@ -445,7 +451,8 @@ class TestRESTclient(unittest.TestCase):
             'patch',
             'https://api.name.com/rest/endpoint',
             headers={
-                'Content-Type': 'application/json'},
+                'Content-Type': 'application/json',
+                'apikey': apikey},
             json={
                 'arg1': 'val1',
                 'arg2': 'val2'},
@@ -468,13 +475,16 @@ class TestRESTclient(unittest.TestCase):
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.restclient.requests.Session')
     def test__delete_Should_CallRequestsDelete_When_Called(self, *patches):
-        client = RESTclient('api.name.com')
+        username = 'user1'
+        password = 'secret'
+        client = RESTclient('api.name.com', username=username, password=password)
         client.delete('/rest/endpoint')
         requests_delete_call = call(
             'delete',
             'https://api.name.com/rest/endpoint',
             headers={
-                'Content-Type': 'application/json'},
+                'Content-Type': 'application/json',
+                'Authorization': 'Basic dXNlcjE6c2VjcmV0'},
             verify=client.cabundle)
         self.assertTrue(requests_delete_call in client.session.request.mock_calls)
 
@@ -500,174 +510,6 @@ class TestRESTclient(unittest.TestCase):
         client = RESTclient('api.name.com')
         result = client.get_response(mock_response)
         self.assertEqual(result, 'response text')
-
-    def test__redact_Should_Redact_When_AuthorizationInHeaders(self, *patches):
-        headers = {
-            'headers': {
-                'Content-Type': 'application/json',
-                'Authorization': 'Basic abcdefghijklmnopqrstuvwxyz'
-            },
-            'verify': 'verify'
-        }
-        result = RESTclient.redact(headers)
-        expected_result = {
-            'headers': {
-                'Content-Type': 'application/json',
-                'Authorization': '[REDACTED]'
-            },
-            'verify': 'verify'
-        }
-        self.assertEqual(result, expected_result)
-
-    def test__redact_Should_Redact_When_Address(self, *patches):
-        headers = {
-            'address': 'Address'
-        }
-        result = RESTclient.redact(headers)
-        expected_result = {
-        }
-        self.assertEqual(result, expected_result)
-
-    def test__redact_Should_Redact_When_AuthInHeaders(self, *patches):
-        headers = {
-            'headers': {
-                'Content-Type': 'application/json',
-                'Auth': 'SessionToken'
-            },
-            'address': 'Address',
-            'verify': 'verify'
-        }
-        result = RESTclient.redact(headers)
-        expected_result = {
-            'headers': {
-                'Content-Type': 'application/json',
-                'Auth': '[REDACTED]'
-            },
-            'verify': 'verify'
-        }
-        self.assertEqual(result, expected_result)
-
-    def test__redact_Should_Redact_When_XApiKeyInHeaders(self, *patches):
-        headers = {
-            'headers': {
-                'Content-Type': 'application/json',
-                'x-api-key': 'some-api-key'
-            },
-            'address': 'Address',
-            'verify': 'verify'
-        }
-        result = RESTclient.redact(headers)
-        expected_result = {
-            'headers': {
-                'Content-Type': 'application/json',
-                'x-api-key': '[REDACTED]'
-            },
-            'verify': 'verify'
-        }
-        self.assertEqual(result, expected_result)
-
-    def test__redact_Should_Redact_When_JsonPassword(self, *patches):
-        headers = {
-            'headers': {
-                'Content-Type': 'application/json',
-                'Auth': 'SessionToken'
-            },
-            'address': 'Address',
-            'verify': 'verify',
-            'json': {
-                'userName': 'some user',
-                'password': 'some password'
-            }
-        }
-        result = RESTclient.redact(headers)
-        expected_result = {
-            'headers': {
-                'Content-Type': 'application/json',
-                'Auth': '[REDACTED]'
-            },
-            'verify': 'verify',
-            'json': {
-                'userName': 'some user',
-                'password': '[REDACTED]'
-            }
-        }
-        self.assertEqual(result, expected_result)
-
-    def test__redact_Should_Redact_When_JsonPasswordCap(self, *patches):
-        headers = {
-            'headers': {
-                'Content-Type': 'application/json',
-                'Auth': 'SessionToken'
-            },
-            'address': 'Address',
-            'verify': 'verify',
-            'json': {
-                'userName': 'some user',
-                'Password': 'some password'
-            }
-        }
-        result = RESTclient.redact(headers)
-        expected_result = {
-            'headers': {
-                'Content-Type': 'application/json',
-                'Auth': '[REDACTED]'
-            },
-            'verify': 'verify',
-            'json': {
-                'userName': 'some user',
-                'Password': '[REDACTED]'
-            }
-        }
-        self.assertEqual(result, expected_result)
-
-    def test__redact_Should_Redact_When_ListOfPasswordsAndTokens(self, *patches):
-        headers = {
-            'headers': {
-                'Content-Type': 'application/json',
-                'Auth': 'SessionToken'
-            },
-            'address': 'Address',
-            'verify': 'verify',
-            'json': [
-                {
-                    'userName': 'some user1',
-                    'Password': 'some password'
-                }, {
-                    'userName': 'some user2',
-                    'Password': 'some password'
-                }, {
-                    'User': 'some user3',
-                    'Token': 'some token3'
-                }, {
-                    'User': 'some user4',
-                    'token': 'some token4'
-                }
-            ]
-        }
-        result = RESTclient.redact(headers)
-        expected_result = {
-            'headers': {
-                'Content-Type': 'application/json',
-                'Auth': '[REDACTED]'
-            },
-            'verify': 'verify',
-            'json': [
-                {
-                    'userName': 'some user1',
-                    'Password': '[REDACTED]'
-                }, {
-                    'userName': 'some user2',
-                    'Password': '[REDACTED]'
-                }, {
-                    'User': 'some user3',
-                    'Token': '[REDACTED]'
-                }, {
-                    'User': 'some user4',
-                    'token': '[REDACTED]'
-                }
-            ]
-        }
-        self.assertEqual(result, expected_result)
 
     @patch('rest3client.restclient.os.access')
     def test__get_error_message_Should_ReturnExpected_When_ResponseJson(self, *patches):

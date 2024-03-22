@@ -31,6 +31,24 @@ logger = logging.getLogger(__name__)
 logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(logging.CRITICAL)
 
 
+class RedactingFormatter(object):
+
+    def __init__(self, orig_formatter, secrets=None):
+        self.orig_formatter = orig_formatter
+        self._secrets = secrets
+
+    def format(self, record):
+        msg = self.orig_formatter.format(record)
+        if self._secrets:
+            for secret in self._secrets:
+                if secret in msg:
+                    msg = msg.replace(secret, "[REDACTED]")
+        return msg
+
+    def __getattr__(self, attr):
+        return getattr(self.orig_formatter, attr)
+
+
 class RESTclient():
     """ class exposing abstracted requests-based http verb apis
     """
@@ -78,6 +96,23 @@ class RESTclient():
         self.retries = kwargs.get('retries', [])
         self.decorate_retries()
 
+        items_to_redact = [
+            self.password,
+            self.api_key,
+            self.apikey,
+            self.bearer_token,
+            self.token,
+            self.jwt,
+            self.certpass
+        ]
+        if self.username and self.password:
+            self.basic = base64.b64encode((f'{self.username}:{self.password}').encode())
+            self.basic = f'{self.basic}'.replace('b\'', '').replace('\'', '')
+            items_to_redact.append(self.basic)
+        items_to_be_redacted = [item for item in items_to_redact if item]
+        for handler in logging.root.handlers:
+            handler.setFormatter(RedactingFormatter(handler.formatter, secrets=items_to_be_redacted))
+
     def get_headers(self, **kwargs):
         """ return headers to pass to requests method
         """
@@ -87,8 +122,7 @@ class RESTclient():
             headers['Content-Type'] = 'application/json'
 
         if self.username and self.password:
-            basic = base64.b64encode((f'{self.username}:{self.password}').encode())
-            headers['Authorization'] = f'Basic {basic}'.replace('b\'', '').replace('\'', '')
+            headers['Authorization'] = f'Basic {self.basic}'
 
         if self.api_key:
             headers['x-api-key'] = self.api_key
@@ -131,9 +165,11 @@ class RESTclient():
     def log_request(self, function_name, arguments, noop):
         """ log request function name and redacted arguments
         """
-        redacted_arguments = json.dumps(self.redact(arguments), indent=2, sort_keys=True, default=str)
+        redacted_arguments = json.dumps(arguments, indent=2, sort_keys=True, default=str)
         cert = f'\nCERT: {self.certfile}' if self.certfile else ''
-        logger.debug(f"\n{function_name}: {arguments['address']} NOOP: {noop}\n{redacted_arguments}{cert}")
+        if function_name.startswith('_'):
+            function_name = function_name[1:]
+        logger.debug(f"\n{function_name}: {arguments['address']}   NOOP: {noop}\n{redacted_arguments}{cert}")
 
     def get_error_message(self, response):
         """ return error message from response
@@ -154,7 +190,7 @@ class RESTclient():
         logger.debug('processing response')
 
         if not response.ok:
-            logger.debug('response was not OK')
+            logger.debug('response was NOT OK')
             error_message = self.get_error_message(response)
             logger.debug(f'{error_message}: {response.status_code}')
             response.raise_for_status()
@@ -374,30 +410,6 @@ class RESTclient():
             self.put = retry(**retry_kwargs)(self.put)
             self.delete = retry(**retry_kwargs)(self.delete)
             self.patch = retry(**retry_kwargs)(self.patch)
-
-    @classmethod
-    def redact(cls, items):
-        """ return redacted copy of items dictionary
-        """
-        def _redact(items):
-            """ redact private method
-            """
-            if isinstance(items, dict):
-                for item_to_redact in cls.items_to_redact:
-                    if item_to_redact in items:
-                        items[item_to_redact] = '[REDACTED]'
-                for item in items.values():
-                    _redact(item)
-            elif isinstance(items, Iterable) and not isinstance(items, str):
-                for item in items:
-                    _redact(item)
-
-        scrubbed = copy.deepcopy(items)
-        if 'address' in scrubbed:
-            del scrubbed['address']
-        for value in scrubbed.values():
-            _redact(value)
-        return scrubbed
 
     @staticmethod
     def get_loggable_kwargs(kwargs):
