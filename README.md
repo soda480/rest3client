@@ -56,6 +56,11 @@ The examples below show how RESTclient can be used to consume the GitHub REST AP
 
 # jwt authentication
 >>> client = RESTclient('my-api.my-company.com', jwt='--my-jwt--')
+
+# api key authentication
+>>> client = RESTclient('my-api.my-company.com', api_key='--my-api-key--')
+# or some systems use apikey header
+>>> client = RESTclient('my-api.my-company.com', apikey='--my-api-key--')
 ```
 
 `GET` request

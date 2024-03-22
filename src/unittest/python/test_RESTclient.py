@@ -154,12 +154,22 @@ class TestRESTclient(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     @patch('rest3client.restclient.os.access')
-    def test__get_headers_Should_ReturnHeaders_When_ApiKey(self, *patches):
+    def test__get_headers_Should_ReturnHeaders_When_Api_Key(self, *patches):
         client = RESTclient('api.name.com', api_key='some-api-key')
         result = client.get_headers(headers={'Content-Type': 'application/xml'})
         expected_result = {
             'Content-Type': 'application/xml',
             'x-api-key': 'some-api-key'
+        }
+        self.assertEqual(result, expected_result)
+
+    @patch('rest3client.restclient.os.access')
+    def test__get_headers_Should_ReturnHeaders_When_ApiKey(self, *patches):
+        client = RESTclient('api.name.com', apikey='some-api-key')
+        result = client.get_headers(headers={'Content-Type': 'application/xml'})
+        expected_result = {
+            'Content-Type': 'application/xml',
+            'apikey': 'some-api-key'
         }
         self.assertEqual(result, expected_result)
 

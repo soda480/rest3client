@@ -60,6 +60,7 @@ class RESTclient():
         self.password = kwargs.get('password')
 
         self.api_key = kwargs.get('api_key')
+        self.apikey = kwargs.get('apikey')
 
         self.bearer_token = kwargs.get('bearer_token')
 
@@ -91,6 +92,9 @@ class RESTclient():
 
         if self.api_key:
             headers['x-api-key'] = self.api_key
+
+        if self.apikey:
+            headers['apikey'] = self.apikey
 
         if self.bearer_token:
             headers['Authorization'] = f'Bearer {self.bearer_token}'
