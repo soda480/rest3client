@@ -79,4 +79,4 @@ def set_properties(project):
     project.set_property('radon_break_build_average_complexity_threshold', 3.6)
     project.set_property('radon_break_build_complexity_threshold', 14)
     project.set_property('bandit_break_build', True)
-    project.set_property('anybadge_exclude', 'coverage, complexity')
+    project.set_property('anybadge_complexity_use_average', True)
