@@ -31,21 +31,29 @@ logger = logging.getLogger(__name__)
 logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(logging.CRITICAL)
 
 
+class RedactingFormatter(logging.Formatter):
+
+    def __init__(self, orig_formatter, secrets=None):
+        self.orig_formatter = orig_formatter
+        self._secrets = secrets
+
+    def format(self, record):
+        msg = self.orig_formatter.format(record)
+        if self._secrets:
+            for secret in self._secrets:
+                if secret in msg:
+                    msg = msg.replace(secret, "[REDACTED]")
+        return msg
+
+    def __getattr__(self, attr):
+        return getattr(self.orig_formatter, attr)
+
+
 class RESTclient():
     """ class exposing abstracted requests-based http verb apis
     """
 
     cabundle = '/etc/ssl/certs/ca-certificates.crt'
-    items_to_redact = [
-        'Authorization',
-        'Auth',
-        'x-api-key',
-        'Password',
-        'password',
-        'JWT',
-        'Token',
-        'token'
-    ]
 
     def __init__(self, hostname, **kwargs):
         """ class constructor
@@ -60,6 +68,7 @@ class RESTclient():
         self.password = kwargs.get('password')
 
         self.api_key = kwargs.get('api_key')
+        self.apikey = kwargs.get('apikey')
 
         self.bearer_token = kwargs.get('bearer_token')
 
@@ -77,20 +86,40 @@ class RESTclient():
         self.retries = kwargs.get('retries', [])
         self.decorate_retries()
 
+        items_to_redact = [
+            self.password,
+            self.api_key,
+            self.apikey,
+            self.bearer_token,
+            self.token,
+            self.jwt,
+            self.certpass
+        ]
+        if self.username and self.password:
+            self.basic = base64.b64encode((f'{self.username}:{self.password}').encode())
+            self.basic = f'{self.basic}'.replace('b\'', '').replace('\'', '')
+            items_to_redact.append(self.basic)
+        items_to_be_redacted = [item for item in items_to_redact if item]
+        for handler in logger.root.handlers:
+            handler.setFormatter(RedactingFormatter(handler.formatter, secrets=items_to_be_redacted))
+
     def get_headers(self, **kwargs):
         """ return headers to pass to requests method
         """
         headers = kwargs.get('headers', {})
 
-        if 'Content-Type' not in headers:
+        if 'files' not in kwargs and 'Content-Type' not in headers:
+            # do not set Content-Type when files are being posted
             headers['Content-Type'] = 'application/json'
 
         if self.username and self.password:
-            basic = base64.b64encode((f'{self.username}:{self.password}').encode())
-            headers['Authorization'] = f'Basic {basic}'.replace('b\'', '').replace('\'', '')
+            headers['Authorization'] = f'Basic {self.basic}'
 
         if self.api_key:
             headers['x-api-key'] = self.api_key
+
+        if self.apikey:
+            headers['apikey'] = self.apikey
 
         if self.bearer_token:
             headers['Authorization'] = f'Bearer {self.bearer_token}'
@@ -104,37 +133,30 @@ class RESTclient():
         return headers
 
     def get_arguments(self, endpoint, kwargs):
-        """ return key word arguments to pass to requests method
+        """ update kwargs with required values to pass to requests method
         """
-        arguments = copy.deepcopy(kwargs)
-
         headers = self.get_headers(**kwargs)
-        if 'headers' not in arguments:
-            arguments['headers'] = headers
+        if 'headers' not in kwargs:
+            kwargs['headers'] = headers
         else:
-            arguments['headers'].update(headers)
+            kwargs['headers'].update(headers)
 
-        if 'verify' not in arguments or arguments.get('verify') is None:
-            arguments['verify'] = self.cabundle
+        if 'verify' not in kwargs or kwargs.get('verify') is None:
+            kwargs['verify'] = self.cabundle
 
         if endpoint.startswith('http'):
-            arguments['address'] = endpoint
+            kwargs['address'] = endpoint
         else:
-            arguments['address'] = f'https://{self.hostname}{endpoint}'
-        arguments.pop('raw_response', None)
-        return arguments
+            kwargs['address'] = f'https://{self.hostname}{endpoint}'
 
     def log_request(self, function_name, arguments, noop):
         """ log request function name and redacted arguments
         """
-        redacted_arguments = self.redact(arguments)
-        try:
-            redacted_arguments = json.dumps(redacted_arguments, indent=2, sort_keys=True)
-        except TypeError:
-            pass
-
+        redacted_arguments = json.dumps(arguments, indent=2, sort_keys=True, default=str)
         cert = f'\nCERT: {self.certfile}' if self.certfile else ''
-        logger.debug(f"\n{function_name}: {arguments['address']} NOOP: {noop}\n{redacted_arguments}{cert}")
+        if function_name.startswith('_'):
+            function_name = function_name[1:]
+        logger.debug(f"\n{function_name}: {arguments['address']}   NOOP: {noop}\n{redacted_arguments}{cert}")
 
     def get_error_message(self, response):
         """ return error message from response
@@ -155,7 +177,7 @@ class RESTclient():
         logger.debug('processing response')
 
         if not response.ok:
-            logger.debug('response was not OK')
+            logger.debug('response was NOT OK')
             error_message = self.get_error_message(response)
             logger.debug(f'{error_message}: {response.status_code}')
             response.raise_for_status()
@@ -184,11 +206,13 @@ class RESTclient():
             """ decorator method to prepare and handle requests and responses
             """
             noop = kwargs.pop('noop', False)
-            arguments = self.get_arguments(endpoint, kwargs)
-            self.log_request(function.__name__.upper(), arguments, noop)
+            raw_response = kwargs.pop('raw_response', None)
+            self.get_arguments(endpoint, kwargs)
+            self.log_request(function.__name__.upper(), kwargs, noop)
             if noop:
                 return
-            response = function(self, endpoint, **arguments)
+            response = function(self, endpoint, **kwargs)
+            kwargs['raw_response'] = raw_response
             return self.get_response(response, **kwargs)
         return _request_handler
 
@@ -375,30 +399,6 @@ class RESTclient():
             self.put = retry(**retry_kwargs)(self.put)
             self.delete = retry(**retry_kwargs)(self.delete)
             self.patch = retry(**retry_kwargs)(self.patch)
-
-    @classmethod
-    def redact(cls, items):
-        """ return redacted copy of items dictionary
-        """
-        def _redact(items):
-            """ redact private method
-            """
-            if isinstance(items, dict):
-                for item_to_redact in cls.items_to_redact:
-                    if item_to_redact in items:
-                        items[item_to_redact] = '[REDACTED]'
-                for item in items.values():
-                    _redact(item)
-            elif isinstance(items, Iterable) and not isinstance(items, str):
-                for item in items:
-                    _redact(item)
-
-        scrubbed = copy.deepcopy(items)
-        if 'address' in scrubbed:
-            del scrubbed['address']
-        for value in scrubbed.values():
-            _redact(value)
-        return scrubbed
 
     @staticmethod
     def get_loggable_kwargs(kwargs):

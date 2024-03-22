@@ -30,7 +30,7 @@ name = 'rest3client'
 authors = [Author('Emilio Reyes', 'emilio.reyes@intel.com')]
 summary = 'An abstraction of the requests library providing a simpler API for consuming HTTP REST APIs'
 url = 'https://github.com/soda480/rest3client'
-version = '0.6.0'
+version = '0.7.0'
 default_task = [
     'clean',
     'analyze',
@@ -79,4 +79,4 @@ def set_properties(project):
     project.set_property('radon_break_build_average_complexity_threshold', 3.6)
     project.set_property('radon_break_build_complexity_threshold', 14)
     project.set_property('bandit_break_build', True)
-    project.set_property('anybadge_exclude', 'coverage, complexity')
+    project.set_property('anybadge_complexity_use_average', True)

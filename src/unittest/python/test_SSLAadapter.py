@@ -18,11 +18,7 @@ from mock import patch
 from mock import mock_open
 from mock import call
 from mock import Mock
-
 from rest3client.ssladapter import SSLAdapter
-
-import logging
-logger = logging.getLogger(__name__)
 
 
 class TestSSLAdapter(unittest.TestCase):

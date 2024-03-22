@@ -18,12 +18,9 @@ from mock import patch
 from mock import mock_open
 from mock import call
 from mock import Mock
-
 from rest3client import RESTcli
 from argparse import Namespace
 import sys
-import logging
-logger = logging.getLogger(__name__)
 
 
 class TestRESTcli(unittest.TestCase):
