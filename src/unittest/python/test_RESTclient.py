@@ -169,6 +169,15 @@ class TestRESTclient(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     @patch('rest3client.restclient.os.access')
+    def test__get_headers_Should_ReturnHeaders_When_Files(self, *patches):
+        client = RESTclient('api.name.com', apikey='some-api-key')
+        result = client.get_headers(files='files')
+        expected_result = {
+            'apikey': 'some-api-key'
+        }
+        self.assertEqual(result, expected_result)
+
+    @patch('rest3client.restclient.os.access')
     def test__get_headers_Should_ReturnHeaders_When_BearerToken(self, *patches):
         client = RESTclient('api.name.com', bearer_token='token')
         result = client.get_headers()
@@ -271,11 +280,11 @@ class TestRESTclient(unittest.TestCase):
         client = RESTclient('api.name.com')
         endpoint = '/endpoint'
         kwargs = {}
-        result = client.get_arguments(endpoint, kwargs)
+        client.get_arguments(endpoint, kwargs)
         expected_result = {
             'h1': 'v1'
         }
-        self.assertEqual(result['headers'], expected_result)
+        self.assertEqual(kwargs['headers'], expected_result)
 
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.RESTclient.get_headers', return_value={'h1': 'v1'})
@@ -287,12 +296,12 @@ class TestRESTclient(unittest.TestCase):
                 'h2': 'v2'
             }
         }
-        result = client.get_arguments(endpoint, kwargs)
+        client.get_arguments(endpoint, kwargs)
         expected_result = {
             'h1': 'v1',
             'h2': 'v2'
         }
-        self.assertEqual(result['headers'], expected_result)
+        self.assertEqual(kwargs['headers'], expected_result)
 
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.RESTclient.get_headers', return_value={'h1': 'v1'})
@@ -300,8 +309,8 @@ class TestRESTclient(unittest.TestCase):
         client = RESTclient('api.name.com')
         endpoint = '/endpoint'
         kwargs = {}
-        result = client.get_arguments(endpoint, kwargs)
-        self.assertEqual(result['verify'], client.cabundle)
+        client.get_arguments(endpoint, kwargs)
+        self.assertEqual(kwargs['verify'], client.cabundle)
 
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.RESTclient.get_headers', return_value={'h1': 'v1'})
@@ -311,8 +320,8 @@ class TestRESTclient(unittest.TestCase):
         kwargs = {
             'verify': None
         }
-        result = client.get_arguments(endpoint, kwargs)
-        self.assertEqual(result['verify'], client.cabundle)
+        client.get_arguments(endpoint, kwargs)
+        self.assertEqual(kwargs['verify'], client.cabundle)
 
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.RESTclient.get_headers', return_value={'h1': 'v1'})
@@ -322,8 +331,8 @@ class TestRESTclient(unittest.TestCase):
         kwargs = {
             'verify': False
         }
-        result = client.get_arguments(endpoint, kwargs)
-        self.assertFalse(result['verify'])
+        client.get_arguments(endpoint, kwargs)
+        self.assertFalse(kwargs['verify'])
 
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.RESTclient.get_headers', return_value={'h1': 'v1'})
@@ -331,9 +340,9 @@ class TestRESTclient(unittest.TestCase):
         client = RESTclient('api.name.com')
         endpoint = '/endpoint'
         kwargs = {}
-        result = client.get_arguments(endpoint, kwargs)
+        client.get_arguments(endpoint, kwargs)
         expected_result = 'https://api.name.com/endpoint'
-        self.assertEqual(result['address'], expected_result)
+        self.assertEqual(kwargs['address'], expected_result)
 
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.RESTclient.get_headers', return_value={'h1': 'v1'})
@@ -341,9 +350,9 @@ class TestRESTclient(unittest.TestCase):
         client = RESTclient('api.name.com')
         endpoint = 'https://upload.api.com/endpoint'
         kwargs = {}
-        result = client.get_arguments(endpoint, kwargs)
+        client.get_arguments(endpoint, kwargs)
         expected_result = 'https://upload.api.com/endpoint'
-        self.assertEqual(result['address'], expected_result)
+        self.assertEqual(kwargs['address'], expected_result)
 
     @patch('rest3client.restclient.os.access')
     def test__get_response_Should_ReturnResponseJson_When_ResponseOk(self, *patches):

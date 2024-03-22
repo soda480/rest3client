@@ -108,7 +108,8 @@ class RESTclient():
         """
         headers = kwargs.get('headers', {})
 
-        if 'Content-Type' not in headers:
+        if 'files' not in kwargs and 'Content-Type' not in headers:
+            # do not set Content-Type when files are being posted
             headers['Content-Type'] = 'application/json'
 
         if self.username and self.password:
@@ -132,25 +133,21 @@ class RESTclient():
         return headers
 
     def get_arguments(self, endpoint, kwargs):
-        """ return key word arguments to pass to requests method
+        """ update kwargs with required values to pass to requests method
         """
-        arguments = copy.deepcopy(kwargs)
-
         headers = self.get_headers(**kwargs)
-        if 'headers' not in arguments:
-            arguments['headers'] = headers
+        if 'headers' not in kwargs:
+            kwargs['headers'] = headers
         else:
-            arguments['headers'].update(headers)
+            kwargs['headers'].update(headers)
 
-        if 'verify' not in arguments or arguments.get('verify') is None:
-            arguments['verify'] = self.cabundle
+        if 'verify' not in kwargs or kwargs.get('verify') is None:
+            kwargs['verify'] = self.cabundle
 
         if endpoint.startswith('http'):
-            arguments['address'] = endpoint
+            kwargs['address'] = endpoint
         else:
-            arguments['address'] = f'https://{self.hostname}{endpoint}'
-        arguments.pop('raw_response', None)
-        return arguments
+            kwargs['address'] = f'https://{self.hostname}{endpoint}'
 
     def log_request(self, function_name, arguments, noop):
         """ log request function name and redacted arguments
@@ -209,11 +206,13 @@ class RESTclient():
             """ decorator method to prepare and handle requests and responses
             """
             noop = kwargs.pop('noop', False)
-            arguments = self.get_arguments(endpoint, kwargs)
-            self.log_request(function.__name__.upper(), arguments, noop)
+            raw_response = kwargs.pop('raw_response', None)
+            self.get_arguments(endpoint, kwargs)
+            self.log_request(function.__name__.upper(), kwargs, noop)
             if noop:
                 return
-            response = function(self, endpoint, **arguments)
+            response = function(self, endpoint, **kwargs)
+            kwargs['raw_response'] = raw_response
             return self.get_response(response, **kwargs)
         return _request_handler
 
