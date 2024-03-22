@@ -54,16 +54,6 @@ class RESTclient():
     """
 
     cabundle = '/etc/ssl/certs/ca-certificates.crt'
-    items_to_redact = [
-        'Authorization',
-        'Auth',
-        'x-api-key',
-        'Password',
-        'password',
-        'JWT',
-        'Token',
-        'token'
-    ]
 
     def __init__(self, hostname, **kwargs):
         """ class constructor
