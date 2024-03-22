@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(logging.CRITICAL)
 
 
-class RedactingFormatter(object):
+class RedactingFormatter(logging.Formatter):
 
     def __init__(self, orig_formatter, secrets=None):
         self.orig_formatter = orig_formatter
@@ -110,7 +110,7 @@ class RESTclient():
             self.basic = f'{self.basic}'.replace('b\'', '').replace('\'', '')
             items_to_redact.append(self.basic)
         items_to_be_redacted = [item for item in items_to_redact if item]
-        for handler in logging.root.handlers:
+        for handler in logger.root.handlers:
             handler.setFormatter(RedactingFormatter(handler.formatter, secrets=items_to_be_redacted))
 
     def get_headers(self, **kwargs):

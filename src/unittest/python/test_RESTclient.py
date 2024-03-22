@@ -24,14 +24,9 @@ from rest3client import RESTclient
 import sys
 import json
 import logging
-logger = logging.getLogger(__name__)
 
-consoleHandler = logging.StreamHandler(sys.stdout)
-logFormatter = logging.Formatter("%(asctime)s %(threadName)s %(name)s [%(funcName)s] %(levelname)s %(message)s")
-consoleHandler.setFormatter(logFormatter)
-rootLogger = logging.getLogger()
-rootLogger.addHandler(consoleHandler)
-rootLogger.setLevel(logging.DEBUG)
+
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 
 class TestRESTclient(unittest.TestCase):
@@ -384,7 +379,7 @@ class TestRESTclient(unittest.TestCase):
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.restclient.requests.Session')
     def test__get_Should_CallRequestsGet_When_Called(self, *patches):
-        token = 'aksdfkjsddsecretedwxxcslsdfas'
+        token = 'aksdfkjsddw332esfdtedwxxcslsdfas'
         client = RESTclient('api.name.com', token=token)
         client._get('/rest/endpoint')
         requests_get_call = call(
