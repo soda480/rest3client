@@ -131,12 +131,7 @@ class RESTclient():
     def log_request(self, function_name, arguments, noop):
         """ log request function name and redacted arguments
         """
-        redacted_arguments = self.redact(arguments)
-        try:
-            redacted_arguments = json.dumps(redacted_arguments, indent=2, sort_keys=True)
-        except TypeError:
-            pass
-
+        redacted_arguments = json.dumps(self.redact(arguments), indent=2, sort_keys=True, default=str)
         cert = f'\nCERT: {self.certfile}' if self.certfile else ''
         logger.debug(f"\n{function_name}: {arguments['address']} NOOP: {noop}\n{redacted_arguments}{cert}")
 

@@ -205,31 +205,18 @@ class TestRESTclient(unittest.TestCase):
 
     @patch('rest3client.restclient.os.access')
     @patch('rest3client.RESTclient.redact')
+    @patch('rest3client.restclient.json.dumps')
     @patch('rest3client.restclient.logger')
-    def test__log_request_Should_CallLogger_When_JsonNotSerializable(self, logger_patch, redact_patch, *patches):
-        redact_patch.return_value = '--redacted-arguments--'
-        client = RESTclient('api.name.com', bearer_token='token')
-        arguments = {
-            'address': '--address--',
-            'data': Mock()
-        }
-        client.log_request('GET', arguments, True)
-        debug_call = call('\nGET: --address-- NOOP: True\n"--redacted-arguments--"')
-        self.assertTrue(debug_call in logger_patch.debug.mock_calls)
-
-    @patch('rest3client.restclient.os.access')
-    @patch('rest3client.RESTclient.redact')
-    @patch('rest3client.restclient.logger')
-    def test__log_request_Should_CallLogger_When_JsonSerializable(self, logger_patch, redact_patch, *patches):
+    def test__log_request_Should_CallLogger_When_JsonSerializable(self, logger_patch, json_dumps_patch, *patches):
         arguments = {
             'address': '--address--',
             'data': 'data'
         }
-        redact_patch.return_value = arguments
+        function_name = 'GET'
+        noop = False
         client = RESTclient('api.name.com', bearer_token='token')
-
-        client.log_request('GET', arguments, True)
-        debug_call = call('\nGET: --address-- NOOP: True\n{\n  "address": "--address--",\n  "data": "data"\n}')
+        client.log_request(function_name, arguments, noop)
+        debug_call = call(f"\n{function_name}: {arguments['address']} NOOP: {noop}\n{json_dumps_patch.return_value}")
         self.assertTrue(debug_call in logger_patch.debug.mock_calls)
 
     @patch('rest3client.restclient.os.access')
