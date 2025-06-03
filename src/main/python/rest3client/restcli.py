@@ -5,12 +5,14 @@ import json
 import logging
 import argparse
 import requests
+import urllib3
 from os import getenv
 from collections.abc import Iterable
-
 from rest3client import RESTclient
 
 logger = logging.getLogger(__name__)
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class RESTcli():
