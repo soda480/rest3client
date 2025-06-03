@@ -30,7 +30,7 @@ name = 'rest3client'
 authors = [Author('Emilio Reyes', 'emilio.reyes@intel.com')]
 summary = 'An abstraction of the requests library providing a simpler API for consuming HTTP REST APIs'
 url = 'https://github.com/soda480/rest3client'
-version = '0.7.0'
+version = '0.7.1'
 default_task = [
     'clean',
     'analyze',
@@ -51,7 +51,7 @@ def set_properties(project):
     project.set_property('flake8_break_build', True)
     project.set_property('flake8_include_scripts', True)
     project.set_property('flake8_include_test_sources', True)
-    project.set_property('flake8_ignore', 'E501, W503, F401')
+    project.set_property('flake8_ignore', 'E501, W503, F401, E722')
     project.build_depends_on('mock')
     project.depends_on_requirements('requirements.txt')
     project.set_property('distutils_readme_description', True)

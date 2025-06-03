@@ -21,6 +21,7 @@ from mock import Mock
 from rest3client import RESTcli
 from argparse import Namespace
 import sys
+import logging
 
 
 class TestRESTcli(unittest.TestCase):
@@ -66,7 +67,7 @@ class TestRESTcli(unittest.TestCase):
         get_parser_patch.return_value = parser_mock
         client = RESTcli(execute=False)
         client.execute()
-        logging_patch.basicConfig.assert_not_called()
+        logging_patch.basicConfig.assert_called_with(level=logging_patch.ERROR)
 
     def test__get_parser_Should_CallExpected_When_Called(self, *patches):
         client = RESTcli(execute=False)
@@ -82,6 +83,7 @@ class TestRESTcli(unittest.TestCase):
             None,
             '--certfile--',
             '--certpass--',
+            None,
             None
         ]
         client = RESTcli(execute=False)

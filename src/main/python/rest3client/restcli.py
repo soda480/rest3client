@@ -5,12 +5,14 @@ import json
 import logging
 import argparse
 import requests
+import urllib3
 from os import getenv
 from collections.abc import Iterable
-
 from rest3client import RESTclient
 
 logger = logging.getLogger(__name__)
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class RESTcli():
@@ -24,7 +26,8 @@ class RESTcli():
         'BEARER_TOKEN',
         'CERTFILE',
         'CERTPASS',
-        'JWT'
+        'JWT',
+        'BASIC_TOKEN'
     ]
 
     def __init__(self, execute=True):
@@ -107,6 +110,8 @@ class RESTcli():
         """
         if self.args.debug:
             logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+        else:
+            logging.basicConfig(level=logging.ERROR)
 
     def get_authentication(self):
         """ return sanitized dictionary consisting of any R3C auth environment variables
@@ -197,6 +202,7 @@ class RESTcli():
 
         if result:
             if self.args.raw_response and not attributes:
+                print(f'elapsed: {result.elapsed.total_seconds()}s')
                 print(f'status_code: {result.status_code}')
                 print(f'url: {result.url}')
                 print('headers:')
