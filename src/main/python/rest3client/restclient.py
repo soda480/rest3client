@@ -76,6 +76,8 @@ class RESTclient():
 
         self.jwt = kwargs.get('jwt')
 
+        self.basic_token = kwargs.get('basic_token')
+
         self.certfile = kwargs.get('certfile')
         self.certkey = kwargs.get('certkey')
         self.certpass = kwargs.get('certpass')
@@ -95,10 +97,15 @@ class RESTclient():
             self.jwt,
             self.certpass
         ]
-        if self.username and self.password:
+        if self.username and self.password and not self.basic_token:
             self.basic = base64.b64encode((f'{self.username}:{self.password}').encode())
             self.basic = f'{self.basic}'.replace('b\'', '').replace('\'', '')
             items_to_redact.append(self.basic)
+
+        if self.basic_token:
+            # basic token takes precendence over username/password
+            items_to_redact.append(self.basic_token)
+
         items_to_be_redacted = [item for item in items_to_redact if item]
         for handler in logger.root.handlers:
             handler.setFormatter(RedactingFormatter(handler.formatter, secrets=items_to_be_redacted))
@@ -129,6 +136,9 @@ class RESTclient():
 
         if self.jwt:
             headers['Authorization'] = f'JWT {self.jwt}'
+
+        if self.basic_token:
+            headers['Authorization'] = f'Basic {self.basic_token}'
 
         return headers
 

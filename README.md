@@ -16,7 +16,7 @@ A subclass inheriting RESTclient can override the base methods providing further
 ### Supported Authentication Schemes
 The library supports most popular authentication schemes:
 - No authentication
-- Basic authentication
+- Basic & Basic token authentication
 - API Key-based authentication
 - Bearer token authentication
 - Token authentication
@@ -42,6 +42,9 @@ The examples below show how RESTclient can be used to consume the GitHub REST AP
 
 # basic authentication
 >>> client = RESTclient('my-api.my-company.com', username='--my-user--', password='--my-password--')
+
+# basic token authentication
+>> client = RESTclient('my-api.my-company.com', basic_token='--my-basic-token--')
 
 # bearer token authentication
 >>> client = RESTclient('api.github.com', bearer_token='--my-token--')
