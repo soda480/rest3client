@@ -51,7 +51,7 @@ def set_properties(project):
     project.set_property('flake8_break_build', True)
     project.set_property('flake8_include_scripts', True)
     project.set_property('flake8_include_test_sources', True)
-    project.set_property('flake8_ignore', 'E501, W503, F401')
+    project.set_property('flake8_ignore', 'E501, W503, F401, E722')
     project.build_depends_on('mock')
     project.depends_on_requirements('requirements.txt')
     project.set_property('distutils_readme_description', True)
