@@ -107,6 +107,8 @@ class RESTcli():
         """
         if self.args.debug:
             logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+        else:
+            logging.basicConfig(level=logging.ERROR)
 
     def get_authentication(self):
         """ return sanitized dictionary consisting of any R3C auth environment variables
