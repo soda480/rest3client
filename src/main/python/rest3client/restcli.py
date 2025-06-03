@@ -26,7 +26,8 @@ class RESTcli():
         'BEARER_TOKEN',
         'CERTFILE',
         'CERTPASS',
-        'JWT'
+        'JWT',
+        'BASIC_TOKEN'
     ]
 
     def __init__(self, execute=True):
@@ -201,6 +202,7 @@ class RESTcli():
 
         if result:
             if self.args.raw_response and not attributes:
+                print(f'elapsed: {result.elapsed.total_seconds()}s')
                 print(f'status_code: {result.status_code}')
                 print(f'url: {result.url}')
                 print('headers:')

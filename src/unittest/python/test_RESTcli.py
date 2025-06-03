@@ -83,6 +83,7 @@ class TestRESTcli(unittest.TestCase):
             None,
             '--certfile--',
             '--certpass--',
+            None,
             None
         ]
         client = RESTcli(execute=False)
