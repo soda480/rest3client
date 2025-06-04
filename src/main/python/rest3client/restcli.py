@@ -87,22 +87,19 @@ class RESTcli():
             dest='attributes',
             type=str,
             required=False,
-            help='attributes to filter from response - if used with --raw will filter from headers otherwise will filter from JSON response')
+            help='attributes to filter from response')
         parser.add_argument(
             '--debug',
             dest='debug',
             action='store_true',
             help='display debug messages to stdout')
         parser.add_argument(
-            '--raw',
-            dest='raw_response',
-            action='store_true',
-            help='return raw response from HTTP request method')
-        parser.add_argument(
-            '--key',
-            dest='key',
-            action='store_true',
-            help='return key value in response - only if response is a dictionary containing a single key value')
+            '--index',
+            dest='index',
+            default=-1,
+            type=int,
+            required=False,
+            help='return the item at the provided index - only valid if response is a list')
         return parser
 
     def configure_logging(self):
@@ -140,13 +137,25 @@ class RESTcli():
         arguments = {}
         if self.args.json_data:
             json_data = self.args.json_data.replace("'", '"')
-            arguments['json'] = json.loads(json_data)
+            try:
+                arguments['json'] = json.loads(json_data)
+            except json.JSONDecodeError:
+                raise ValueError('--json value is not a valid JSON object')
         if self.args.headers_data:
             headers_data = self.args.headers_data.replace("'", '"')
-            arguments['headers'] = json.loads(headers_data)
-        if self.args.raw_response:
-            arguments['raw_response'] = True
-        # logger.debug(f'arguments parsed from cli are:\n{arguments}')
+            try:
+                arguments['headers'] = json.loads(headers_data)
+            except json.JSONDecodeError:
+                raise ValueError('--headers value is not a valid JSON object')
+        else:
+            headers_data = getenv('R3C_HEADERS')
+            if headers_data:
+                logger.debug('using headers from R3C_HEADERS environment variable')
+                headers_data = headers_data.replace("'", '"')
+                try:
+                    arguments['headers'] = json.loads(headers_data)
+                except json.JSONDecodeError:
+                    raise ValueError('R3C_HEADERS environment variable is not a valid JSON object')
         return arguments
 
     def execute_request(self, client):
@@ -193,24 +202,14 @@ class RESTcli():
         """ process HTTP request response
         """
         if attributes:
-            if self.args.raw_response:
-                result = self.filter_response(response.headers, attributes)
-            else:
-                result = self.filter_response(response, attributes)
+            result = self.filter_response(response, attributes)
         else:
             result = response
 
         if result:
-            if self.args.raw_response and not attributes:
-                print(f'elapsed: {result.elapsed.total_seconds()}s')
-                print(f'status_code: {result.status_code}')
-                print(f'url: {result.url}')
-                print('headers:')
-                print(json.dumps(dict(result.headers), indent=2))
-                print('json:')
-                print(json.dumps(result.json(), indent=2))
-            else:
-                if self.args.key and len(result) == 1 and isinstance(result, dict):
-                    print(list(result.values())[0])
+            if self.args.index >= 0 and isinstance(result, list):
+                if len(result) > self.args.index:
+                    result = result[self.args.index]
                 else:
-                    print(json.dumps(result, indent=2))
+                    raise ValueError(f'length of result is {len(result)} less than provided index {self.args.index}')
+            print(json.dumps(result, indent=3))

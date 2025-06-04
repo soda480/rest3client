@@ -1,6 +1,6 @@
 # rest3client
 [![GitHub Workflow Status](https://github.com/soda480/rest3client/workflows/build/badge.svg)](https://github.com/soda480/rest3client/actions)
-[![coverage](https://img.shields.io/badge/coverage-96%25-brightgreen)](https://pybuilder.io/)
+[![coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)](https://pybuilder.io/)
 [![complexity](https://img.shields.io/badge/complexity-A-brightgreen)](https://radon.readthedocs.io/en/latest/api.html#module-radon.complexity)
 [![vulnerabilities](https://img.shields.io/badge/vulnerabilities-None-brightgreen)](https://pypi.org/project/bandit/)
 [![PyPI version](https://badge.fury.io/py/rest3client.svg)](https://badge.fury.io/py/rest3client)
@@ -206,9 +206,6 @@ optional arguments:
                         --raw will filter from headers otherwise will filter
                         from JSON response
   --debug               display debug messages to stdout
-  --raw                 return raw response from HTTP request method
-  --key                 return key value in response - only if response is a
-                        dictionary containing a single key value
 ```
 
 Set environment variables prefixed with `R3C_`.
@@ -248,6 +245,9 @@ export R3C_JWT=--my-jwt--
 Some examples for how to execute the CLI to consume the GitHUB API:
 
 ```bash
+export R3C_ADDRESS=api.github.com
+export R3C_BEARER_TOKEN=--api-token--
+
 rest POST /user/repos --json "{'name': 'test-repo1'}" --attributes "name, private, description, permissions"
 
 rest GET /user/repos --attributes "name, full_name, private, description, permissions"
@@ -262,7 +262,10 @@ rest GET /repos/soda480/test-repo1/labels --attributes name
 
 rest DELETE /repos/soda480/test-repo1 --debug
 
-rest GET /rate_limit --raw
+rest GET /rate_limit
+
+rest GET /users/soda480/repos --attributes=name,full_name,id,url,open_issues,language --index=5
+
 ```
 
 ### Development
