@@ -267,16 +267,6 @@ class TestRESTcli(unittest.TestCase):
 
     @patch('rest3client.restcli.json.dumps')
     @patch('rest3client.RESTcli.filter_response')
-    def test__process_response_Should_CallExpected_When_Attributes(self, filter_response_patch, *patches):
-        client = RESTcli(execute=False)
-        client.args = Namespace(key=None)
-        attributes = ['a2']
-        response_mock = Mock()
-        response_mock.headers = {'h1': 'v1'}
-        client.process_response(response_mock, attributes)
-
-    @patch('rest3client.restcli.json.dumps')
-    @patch('rest3client.RESTcli.filter_response')
     def test__process_response_Should_CallExpected_When_NoAttributes(self, filter_response_patch, *patches):
         client = RESTcli(execute=False)
         client.args = Namespace(key=None)
@@ -287,9 +277,9 @@ class TestRESTcli(unittest.TestCase):
 
     @patch('rest3client.restcli.json.dumps')
     @patch('rest3client.RESTcli.filter_response')
-    def test__process_response_Should_CallExpected_When_KeyAttributes(self, filter_response_patch, *patches):
+    def test__process_response_Should_CallExpected_When_Attributes(self, filter_response_patch, *patches):
         client = RESTcli(execute=False)
-        client.args = Namespace(key=True)
+        client.args = Namespace()
         headers = {'key': 'value'}
         response_mock = Mock()
         response_mock.headers = headers

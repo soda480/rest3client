@@ -206,8 +206,6 @@ optional arguments:
                         --raw will filter from headers otherwise will filter
                         from JSON response
   --debug               display debug messages to stdout
-  --key                 return key value in response - only if response is a
-                        dictionary containing a single key value
 ```
 
 Set environment variables prefixed with `R3C_`.

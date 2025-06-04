@@ -93,11 +93,6 @@ class RESTcli():
             dest='debug',
             action='store_true',
             help='display debug messages to stdout')
-        parser.add_argument(
-            '--key',
-            dest='key',
-            action='store_true',
-            help='return key value in response - only if response is a dictionary containing a single key value')
         return parser
 
     def configure_logging(self):
@@ -205,7 +200,4 @@ class RESTcli():
             result = response
 
         if result:
-            if self.args.key and len(result) == 1 and isinstance(result, dict):
-                print(list(result.values())[0])
-            else:
-                print(json.dumps(result, indent=2))
+            print(json.dumps(result, indent=3))
