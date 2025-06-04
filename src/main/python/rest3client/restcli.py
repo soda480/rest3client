@@ -140,13 +140,27 @@ class RESTcli():
         arguments = {}
         if self.args.json_data:
             json_data = self.args.json_data.replace("'", '"')
-            arguments['json'] = json.loads(json_data)
+            try:
+                arguments['json'] = json.loads(json_data)
+            except json.JSONDecodeError:
+                raise ValueError('--json value is not a valid JSON object')
         if self.args.headers_data:
             headers_data = self.args.headers_data.replace("'", '"')
-            arguments['headers'] = json.loads(headers_data)
+            try:
+                arguments['headers'] = json.loads(headers_data)
+            except json.JSONDecodeError:
+                raise ValueError('--headers value is not a valid JSON object')
+        else:
+            headers_data = getenv('R3C_HEADERS')
+            if headers_data:
+                logger.debug('using headers from R3C_HEADERS environment variable')
+                headers_data = headers_data.replace("'", '"')
+                try:
+                    arguments['headers'] = json.loads(headers_data)
+                except json.JSONDecodeError:
+                    raise ValueError('R3C_HEADERS environment variable is not a valid JSON object')
         if self.args.raw_response:
             arguments['raw_response'] = True
-        # logger.debug(f'arguments parsed from cli are:\n{arguments}')
         return arguments
 
     def execute_request(self, client):

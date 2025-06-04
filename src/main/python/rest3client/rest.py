@@ -17,6 +17,9 @@ def main():
             except:
                 print(error.response.text)
         sys.exit(1)
+    except Exception as error:
+        print(error)
+        sys.exit(1)
 
 
 if __name__ == '__main__':  # pragma: no cover
