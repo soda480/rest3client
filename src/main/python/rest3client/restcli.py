@@ -87,12 +87,19 @@ class RESTcli():
             dest='attributes',
             type=str,
             required=False,
-            help='attributes to filter from response - if used with --raw will filter from headers otherwise will filter from JSON response')
+            help='attributes to filter from response')
         parser.add_argument(
             '--debug',
             dest='debug',
             action='store_true',
             help='display debug messages to stdout')
+        parser.add_argument(
+            '--index',
+            dest='index',
+            default=-1,
+            type=int,
+            required=False,
+            help='return the item at the provided index - only valid if response is a list')
         return parser
 
     def configure_logging(self):
@@ -200,4 +207,9 @@ class RESTcli():
             result = response
 
         if result:
+            if self.args.index >= 0 and isinstance(result, list):
+                if len(result) > self.args.index:
+                    result = result[self.args.index]
+                else:
+                    raise ValueError(f'length of result is {len(result)} less than provided index {self.args.index}')
             print(json.dumps(result, indent=3))

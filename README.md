@@ -245,6 +245,9 @@ export R3C_JWT=--my-jwt--
 Some examples for how to execute the CLI to consume the GitHUB API:
 
 ```bash
+export R3C_ADDRESS=api.github.com
+export R3C_BEARER_TOKEN=--api-token--
+
 rest POST /user/repos --json "{'name': 'test-repo1'}" --attributes "name, private, description, permissions"
 
 rest GET /user/repos --attributes "name, full_name, private, description, permissions"
@@ -259,7 +262,10 @@ rest GET /repos/soda480/test-repo1/labels --attributes name
 
 rest DELETE /repos/soda480/test-repo1 --debug
 
-rest GET /rate_limit --raw
+rest GET /rate_limit
+
+rest GET /users/soda480/repos --attributes=name,full_name,id,url,open_issues,language --index=5
+
 ```
 
 ### Development

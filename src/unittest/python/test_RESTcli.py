@@ -269,7 +269,7 @@ class TestRESTcli(unittest.TestCase):
     @patch('rest3client.RESTcli.filter_response')
     def test__process_response_Should_CallExpected_When_NoAttributes(self, filter_response_patch, *patches):
         client = RESTcli(execute=False)
-        client.args = Namespace(key=None)
+        client.args = Namespace(index=-1)
         response_mock = Mock()
         response_mock.status_code = 202
         response_mock.headers = {}
@@ -279,7 +279,7 @@ class TestRESTcli(unittest.TestCase):
     @patch('rest3client.RESTcli.filter_response')
     def test__process_response_Should_CallExpected_When_Attributes(self, filter_response_patch, *patches):
         client = RESTcli(execute=False)
-        client.args = Namespace()
+        client.args = Namespace(index=-1)
         headers = {'key': 'value'}
         response_mock = Mock()
         response_mock.headers = headers
@@ -289,5 +289,5 @@ class TestRESTcli(unittest.TestCase):
 
     def test__process_response_Should_CallExpected_When_NoAttributesNoResponse(self, *patches):
         client = RESTcli(execute=False)
-        client.args = Namespace()
+        client.args = Namespace(index=-1)
         client.process_response(None, None)
