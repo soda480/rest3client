@@ -94,11 +94,6 @@ class RESTcli():
             action='store_true',
             help='display debug messages to stdout')
         parser.add_argument(
-            '--raw',
-            dest='raw_response',
-            action='store_true',
-            help='return raw response from HTTP request method')
-        parser.add_argument(
             '--key',
             dest='key',
             action='store_true',
@@ -159,8 +154,6 @@ class RESTcli():
                     arguments['headers'] = json.loads(headers_data)
                 except json.JSONDecodeError:
                     raise ValueError('R3C_HEADERS environment variable is not a valid JSON object')
-        if self.args.raw_response:
-            arguments['raw_response'] = True
         return arguments
 
     def execute_request(self, client):
@@ -207,24 +200,12 @@ class RESTcli():
         """ process HTTP request response
         """
         if attributes:
-            if self.args.raw_response:
-                result = self.filter_response(response.headers, attributes)
-            else:
-                result = self.filter_response(response, attributes)
+            result = self.filter_response(response, attributes)
         else:
             result = response
 
         if result:
-            if self.args.raw_response and not attributes:
-                print(f'elapsed: {result.elapsed.total_seconds()}s')
-                print(f'status_code: {result.status_code}')
-                print(f'url: {result.url}')
-                print('headers:')
-                print(json.dumps(dict(result.headers), indent=2))
-                print('json:')
-                print(json.dumps(result.json(), indent=2))
+            if self.args.key and len(result) == 1 and isinstance(result, dict):
+                print(list(result.values())[0])
             else:
-                if self.args.key and len(result) == 1 and isinstance(result, dict):
-                    print(list(result.values())[0])
-                else:
-                    print(json.dumps(result, indent=2))
+                print(json.dumps(result, indent=2))
