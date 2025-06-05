@@ -27,10 +27,10 @@ use_plugin('pypi:pybuilder_bandit')
 use_plugin('pypi:pybuilder_anybadge')
 
 name = 'rest3client'
-authors = [Author('Emilio Reyes', 'emilio.reyes@intel.com')]
+authors = [Author('Emilio Reyes', 'soda480@gmail.com')]
 summary = 'An abstraction of the requests library providing a simpler API for consuming HTTP REST APIs'
 url = 'https://github.com/soda480/rest3client'
-version = '0.7.2'
+version = '0.7.3'
 default_task = [
     'clean',
     'analyze',

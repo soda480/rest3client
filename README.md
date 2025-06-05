@@ -1,6 +1,6 @@
 # rest3client
 [![GitHub Workflow Status](https://github.com/soda480/rest3client/workflows/build/badge.svg)](https://github.com/soda480/rest3client/actions)
-[![coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)](https://pybuilder.io/)
+[![coverage](https://img.shields.io/badge/coverage-92%25-brightgreen)](https://pybuilder.io/)
 [![complexity](https://img.shields.io/badge/complexity-A-brightgreen)](https://radon.readthedocs.io/en/latest/api.html#module-radon.complexity)
 [![vulnerabilities](https://img.shields.io/badge/vulnerabilities-None-brightgreen)](https://pypi.org/project/bandit/)
 [![PyPI version](https://badge.fury.io/py/rest3client.svg)](https://badge.fury.io/py/rest3client)
@@ -250,7 +250,7 @@ export R3C_BEARER_TOKEN=--api-token--
 
 rest POST /user/repos --json "{'name': 'test-repo1'}" --attributes "name, private, description, permissions"
 
-rest GET /user/repos --attributes "name, full_name, private, description, permissions"
+rest GET /user/repos --attributes "name, full_name, description, permissions.admin"
 
 rest POST /repos/soda480/test-repo1/labels --json "{'name': 'label1', 'color': 'C7EFD5'}" --attributes url
 
@@ -264,7 +264,7 @@ rest DELETE /repos/soda480/test-repo1 --debug
 
 rest GET /rate_limit
 
-rest GET /users/soda480/repos --attributes=name,full_name,id,url,open_issues,language --index=5
+rest GET /users/soda480/repos --attributes=name,full_name,id,url,open_issues,language,owner.id --index=5
 
 ```
 
@@ -276,8 +276,6 @@ Build the Docker image:
 ```sh
 docker image build \
 --target build-image \
---build-arg http_proxy \
---build-arg https_proxy \
 -t \
 rest3client:latest .
 ```
@@ -287,8 +285,6 @@ Run the Docker container:
 docker container run \
 --rm \
 -it \
--e http_proxy \
--e https_proxy \
 -v $PWD:/code \
 rest3client:latest \
 bash
