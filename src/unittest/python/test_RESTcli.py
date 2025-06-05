@@ -19,6 +19,7 @@ from mock import mock_open
 from mock import call
 from mock import Mock
 from rest3client import RESTcli
+from rest3client.restcli import get_attrs, get_attr
 from argparse import Namespace
 import sys
 import logging
@@ -189,85 +190,9 @@ class TestRESTcli(unittest.TestCase):
         rest_client_mock.delete.assert_called_once_with('/endpoint')
         self.assertEqual(result, rest_client_mock.delete.return_value)
 
-    def test__filter_response_Should_ReturnResponse_When_NoAttributes(self, *patches):
-        client = RESTcli(execute=False)
-        result = client.filter_response('--response--', None)
-        expected_result = '--response--'
-        self.assertEqual(result, expected_result)
-
-    def test__filter_response_Should_ReturnResponse_When_AttributesAndResponseIsDict(self, *patches):
-        client = RESTcli(execute=False)
-        response = {
-            'a1': 'v1',
-            'a2': 'v2',
-            'a3': 'v3',
-            'a4': 'v4'
-        }
-        attributes = ['a2', 'a4', 'a5']
-        result = client.filter_response(response, attributes)
-        expected_result = {
-            'a2': 'v2',
-            'a4': 'v4'
-        }
-        self.assertEqual(result, expected_result)
-
-    def test__filter_response_Should_ReturnResponse_When_RegExAttributesAndResponseIsDict(self, *patches):
-        client = RESTcli(execute=False)
-        response = {
-            'a1': 'v1',
-            'a2': 'v2',
-            'a3': 'v3',
-            'a4': 'v4',
-            'b1': 'vb1',
-            'c1': 'vc1'
-        }
-        attributes = ['a.*', 'a4', 'c1']
-        result = client.filter_response(response, attributes)
-        expected_result = {
-            'a1': 'v1',
-            'a2': 'v2',
-            'a3': 'v3',
-            'a4': 'v4',
-            'c1': 'vc1'
-        }
-        self.assertEqual(result, expected_result)
-
-    def test__filter_response_Should_ReturnResponse_When_AttributesAndResponseIsList(self, *patches):
-        client = RESTcli(execute=False)
-        response = [
-            {
-                'a1': 'v1',
-                'a2': 'v2',
-                'a3': 'v3',
-                'a4': 'v4'
-            }, {
-                'a1': 'v1',
-                'a2': 'v2',
-                'a3': 'v3',
-                'a4': 'v4'
-            }
-        ]
-        attributes = ['a2']
-        result = client.filter_response(response, attributes)
-        expected_result = [
-            {
-                'a2': 'v2'
-            }, {
-                'a2': 'v2'
-            }
-        ]
-        self.assertEqual(result, expected_result)
-
-    def test__filter_response_Should_ReturnResponse_When_AttributesAndResponseIsStr(self, *patches):
-        client = RESTcli(execute=False)
-        attributes = ['a2']
-        result = client.filter_response('--response--', attributes)
-        expected_result = '--response--'
-        self.assertEqual(result, expected_result)
-
     @patch('rest3client.restcli.json.dumps')
-    @patch('rest3client.RESTcli.filter_response')
-    def test__process_response_Should_CallExpected_When_NoAttributes(self, filter_response_patch, *patches):
+    @patch('rest3client.restcli.get_attrs')
+    def test__process_response_Should_CallExpected_When_NoAttributes(self, get_attrs_patch, *patches):
         client = RESTcli(execute=False)
         client.args = Namespace(index=-1)
         response_mock = Mock()
@@ -276,14 +201,14 @@ class TestRESTcli(unittest.TestCase):
         client.process_response(response_mock, None)
 
     @patch('rest3client.restcli.json.dumps')
-    @patch('rest3client.RESTcli.filter_response')
-    def test__process_response_Should_CallExpected_When_Attributes(self, filter_response_patch, *patches):
+    @patch('rest3client.restcli.get_attrs')
+    def test__process_response_Should_CallExpected_When_Attributes(self, get_attrs_patch, *patches):
         client = RESTcli(execute=False)
         client.args = Namespace(index=-1)
         headers = {'key': 'value'}
         response_mock = Mock()
         response_mock.headers = headers
-        filter_response_patch.return_value = headers
+        get_attrs_patch.return_value = headers
         attributes = ['a2']
         client.process_response(response_mock, attributes)
 
@@ -291,3 +216,100 @@ class TestRESTcli(unittest.TestCase):
         client = RESTcli(execute=False)
         client.args = Namespace(index=-1)
         client.process_response(None, None)
+
+    def test__get_attr_When_NoAttrs(self, *patches):
+        self.assertIsNone(get_attr(['a', 'b', 'c'], 'a.b.c'))
+
+    def test__get_attr_When_Attrs(self, *Patches):
+        d = {
+            'a1': 'va1',
+            'a2': {
+                'b1': {
+                    'c1': 'vc1',
+                    'c2': 'vc2'
+                },
+                'b2': {
+                    'c3': {
+                        'd1': 'vd1'
+                    }
+                },
+                'b3': 'vb3'
+            },
+            'a3': 'va3'
+        }
+        self.assertEqual(get_attr(d, 'a1'), 'va1')
+        self.assertEqual(get_attr(d, 'a2.b2.c3.d1'), 'vd1')
+        self.assertEqual(get_attr(d, 'a2.b1.c2'), 'vc2')
+        self.assertIsNone(get_attr(d, 'a2.b4'))
+        self.assertIsNone(get_attr(d, 'a4.b2.c1'))
+
+    def test__get_attrs_When_NoAttrs(self, *patches):
+        d = {
+            'a1': 'va1',
+            'a2': {
+                'b1': {
+                    'c1': 'vc1',
+                    'c2': 'vc2'
+                },
+                'b2': {
+                    'c3': {
+                        'd1': 'vd1'
+                    }
+                },
+                'b3': 'vb3'
+            },
+            'a3': 'va3'
+        }
+        self.assertEqual(get_attrs(d, []), d)
+
+    def test__get_attrs_When_Dict(self, *patches):
+        d = {
+            'a1': 'va1',
+            'a2': {
+                'b1': {
+                    'c1': 'vc1',
+                    'c2': 'vc2'
+                },
+                'b2': {
+                    'c3': {
+                        'd1': 'vd1'
+                    }
+                },
+                'b3': 'vb3'
+            },
+            'a3': 'va3'
+        }
+        expected_result = {
+            'a2.b2.c3.d1': 'vd1',
+            'a1': 'va1',
+            'a2.b3': 'vb3'
+        }
+        self.assertEqual(get_attrs(d, ['a2.b2.c3.d1', 'a1', 'a2.b3', 'x.y']), expected_result)
+
+    def test__get_attrs_When_List(self, *patches):
+        d = {
+            'a1': 'va1',
+            'a2': {
+                'b1': {
+                    'c1': 'vc1',
+                    'c2': 'vc2'
+                },
+                'b2': {
+                    'c3': {
+                        'd1': 'vd1'
+                    }
+                },
+                'b3': 'vb3'
+            },
+            'a3': 'va3'
+        }
+        ls = []
+        ls.append(d)
+        ls.append(d)
+        ls.append(d)
+        expected_result = [
+            {'a2.b1.c2': 'vc2', 'a2.b3': 'vb3'},
+            {'a2.b1.c2': 'vc2', 'a2.b3': 'vb3'},
+            {'a2.b1.c2': 'vc2', 'a2.b3': 'vb3'},
+        ]
+        self.assertEqual(get_attrs(ls, ['x.y', 'a2.b1.c2', 'a2.b3']), expected_result)

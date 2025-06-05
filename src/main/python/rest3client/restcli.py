@@ -15,6 +15,42 @@ logger = logging.getLogger(__name__)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
+def get_attrs(data, attrs):
+    """ return list of attributes and their values from data where
+        data can be a dict or a list of dicts
+    """
+    if not attrs:
+        return data
+    if isinstance(data, (dict, requests.structures.CaseInsensitiveDict)):
+        result = {}
+        for attr in attrs:
+            value = get_attr(data, attr)
+            if value is not None:
+                result[attr] = value
+        return result
+    if isinstance(data, Iterable) and not isinstance(data, str):
+        result = []
+        for item in data:
+            result.append(get_attrs(item, attrs))
+        return result
+    # return data if it is not a dict or non-str iterable
+    return data
+
+
+def get_attr(data, attr):
+    """ get attribute denoted by attr from data dict
+        attr can be a dot annotated attribute
+    """
+    if not isinstance(data, dict):
+        return
+    if '.' in attr:
+        attrs = attr.split('.')
+        if attrs[0] in data:
+            return get_attr(data[attrs[0]], '.'.join(attrs[1:]))
+    else:
+        return data.get(attr)
+
+
 class RESTcli():
     """ class defining CLI for RESTclient
     """
@@ -174,38 +210,10 @@ class RESTcli():
             response = client.get(self.args.endpoint, **arguments)
         return response
 
-    def filter_response(self, response, attributes):
-        """ filter response containing specified attributes
-        """
-        if not attributes:
-            return response
-
-        if isinstance(response, (dict, requests.structures.CaseInsensitiveDict)):
-            filtered = {}
-            for key in response:
-                for attribute in attributes:
-                    if re.match(attribute, key):
-                        if key not in filtered:
-                            filtered[key] = response[key]
-
-        elif isinstance(response, Iterable) and not isinstance(response, str):
-            filtered = []
-            for item in response:
-                filtered.append(self.filter_response(item, attributes))
-
-        else:
-            filtered = response
-
-        return filtered
-
     def process_response(self, response, attributes):
         """ process HTTP request response
         """
-        if attributes:
-            result = self.filter_response(response, attributes)
-        else:
-            result = response
-
+        result = get_attrs(response, attributes)
         if result:
             if self.args.index >= 0 and isinstance(result, list):
                 if len(result) > self.args.index:
