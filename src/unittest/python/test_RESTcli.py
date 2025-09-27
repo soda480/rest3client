@@ -186,8 +186,8 @@ class TestRESTcli(unittest.TestCase):
         client = RESTcli(execute=False)
         client.args = Namespace(method='DELETE', endpoint='/endpoint')
         rest_client_mock = Mock()
-        result = client.execute_request(rest_client_mock)
-        rest_client_mock.delete.assert_called_once_with('/endpoint')
+        result = client.execute_request(rest_client_mock, skip_ssl=True)
+        rest_client_mock.delete.assert_called_once_with('/endpoint', verify=False)
         self.assertEqual(result, rest_client_mock.delete.return_value)
 
     @patch('rest3client.restcli.json.dumps')

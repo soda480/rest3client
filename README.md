@@ -6,22 +6,16 @@
 [![PyPI version](https://badge.fury.io/py/rest3client.svg)](https://badge.fury.io/py/rest3client)
 [![python](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-teal)](https://www.python.org/downloads/)
 
-rest3client is an abstraction of the HTTP requests library (https://pypi.org/project/requests/) providing a simpler API for consuming HTTP REST APIs.
+rest3client is a Python library that builds upon the popular [requests](https://pypi.org/project/requests/), library, offering a higher-level, more streamlined API to interact with RESTful HTTP services. It simplifies tasks like handling standard request verbs, response parsing, error extraction, pagination, retries, and authentication.
 
-The library further abstracts the underlying HTTP requests methods providing equivalent methods for GET, POST, PATCH, PUT and DELETE. The library includes a RESTclient class that implements a consistent approach for processing request responses, extracting error messages from responses, providing standard headers to request methods, and enabling resiliency through integration with the retrying library. It also supports paging for REST APIs that leverage link headers. The abstraction enables the consumer to focus on their business logic and less on the complexites of setting up requests and processing request responses.
-
-A subclass inheriting RESTclient can override the base methods providing further customization and flexibility including the ability to automatically retry on exceptions.
-
-
-### Supported Authentication Schemes
-The library supports most popular authentication schemes:
-- No authentication
-- Basic & Basic token authentication
-- API Key-based authentication
-- Bearer token authentication
-- Token authentication
-- Certificate-based authentication
-- JWT authentication
+The library is designed to simplify and standardize REST API interactions by abstracting away repetitive setup and boilerplate. It provides a unified API for HTTP verbs: Provides concise methods for GET, POST, PATCH, PUT, DELETE, and HEAD operations. It provides:
+* Consistent response handling: Centralizes processes like parsing responses, extracting error messages, and managing headers.
+* Pagination support: Works with APIs that use HTTP Link headers, offering:
+  * _get='all': fetches every page and returns a unified list filtered by attributes.
+  * _get='page': yields page by page for manual iteration.
+* Retry capability: Integrated with the retrying library, allowing developers to automatically retry failed requests, either via configuration or custom exception-based logic. Retry behavior can also be overridden using environment variables.
+* Flexible authentication: Supports a range of common methods—no auth, basic (with optional token), API key, bearer token, JWT, and certificate-based methods.
+* CLI interface: Comes with a command-line tool (`rest`) enabling quick REST API calls without writing code—ideal for scripting or manual testing with options for JSON payloads, header customization, attribute filtering, and debug output.
 
 ### Installation
 ```bash
@@ -206,6 +200,7 @@ optional arguments:
                         --raw will filter from headers otherwise will filter
                         from JSON response
   --debug               display debug messages to stdout
+  --skip-ssl            skip SSL certificate validation
 ```
 
 Set environment variables prefixed with `R3C_`.
