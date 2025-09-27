@@ -79,7 +79,7 @@ class RESTcli():
         self.args = parser.parse_args()
         self.configure_logging()
         client = self.get_client()
-        response = self.execute_request(client)
+        response = self.execute_request(client, skip_ssl=parser.skip_ssl)
         attributes = self.get_attributes()
         self.process_response(response, attributes)
 
@@ -136,6 +136,11 @@ class RESTcli():
             type=int,
             required=False,
             help='return the item at the provided index - only valid if response is a list')
+        parser.add_argument(
+            '--skip-ssl',
+            dest='skip_ssl',
+            action='store_true',
+            help='skip SSL certificate validation')
         return parser
 
     def configure_logging(self):
@@ -194,10 +199,12 @@ class RESTcli():
                     raise ValueError('R3C_HEADERS environment variable is not a valid JSON object')
         return arguments
 
-    def execute_request(self, client):
+    def execute_request(self, client, skip_ssl=False):
         """ execute HTTP request method
         """
         arguments = self.get_arguments()
+        if skip_ssl:
+            arguments['verify'] = False
         if self.args.method == 'POST':
             response = client.post(self.args.endpoint, **arguments)
         elif self.args.method == 'PUT':
