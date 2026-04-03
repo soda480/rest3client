@@ -79,7 +79,7 @@ class RESTcli():
         self.args = parser.parse_args()
         self.configure_logging()
         client = self.get_client()
-        response = self.execute_request(client, skip_ssl=parser.skip_ssl)
+        response = self.execute_request(client, skip_ssl=self.args.skip_ssl)
         attributes = self.get_attributes()
         self.process_response(response, attributes)
 
@@ -112,6 +112,12 @@ class RESTcli():
             type=str,
             required=False,
             help='string representing JSON serializable object to send to HTTP request method')
+        parser.add_argument(
+            '--data',
+            dest='data',
+            type=str,
+            required=False,
+            help='string representing form-encoded data object to send to HTTP request method')
         parser.add_argument(
             '--headers',
             dest='headers_data',
@@ -176,23 +182,25 @@ class RESTcli():
         """ return dictionary of arguments to pass request method
         """
         arguments = {}
-        if self.args.json_data:
-            json_data = self.args.json_data.replace("'", '"')
+        if self.args.data:
             try:
-                arguments['json'] = json.loads(json_data)
+                arguments['data'] = json.loads(self.args.data)
+            except json.JSONDecodeError:
+                raise ValueError('--data value is not a valid JSON object')
+        if self.args.json_data:
+            try:
+                arguments['json'] = json.loads(self.args.json_data)
             except json.JSONDecodeError:
                 raise ValueError('--json value is not a valid JSON object')
         if self.args.headers_data:
-            headers_data = self.args.headers_data.replace("'", '"')
             try:
-                arguments['headers'] = json.loads(headers_data)
+                arguments['headers'] = json.loads(self.args.headers_data)
             except json.JSONDecodeError:
                 raise ValueError('--headers value is not a valid JSON object')
         else:
             headers_data = getenv('R3C_HEADERS')
             if headers_data:
                 logger.debug('using headers from R3C_HEADERS environment variable')
-                headers_data = headers_data.replace("'", '"')
                 try:
                     arguments['headers'] = json.loads(headers_data)
                 except json.JSONDecodeError:

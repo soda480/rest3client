@@ -1,6 +1,6 @@
 # rest3client
 [![GitHub Workflow Status](https://github.com/soda480/rest3client/workflows/build/badge.svg)](https://github.com/soda480/rest3client/actions)
-[![coverage](https://img.shields.io/badge/coverage-92%25-brightgreen)](https://pybuilder.io/)
+[![coverage](https://img.shields.io/badge/coverage-91%25-brightgreen)](https://pybuilder.io/)
 [![complexity](https://img.shields.io/badge/complexity-A-brightgreen)](https://radon.readthedocs.io/en/latest/api.html#module-radon.complexity)
 [![vulnerabilities](https://img.shields.io/badge/vulnerabilities-None-brightgreen)](https://pypi.org/project/bandit/)
 [![PyPI version](https://badge.fury.io/py/rest3client.svg)](https://badge.fury.io/py/rest3client)
@@ -243,13 +243,13 @@ Some examples for how to execute the CLI to consume the GitHUB API:
 export R3C_ADDRESS=api.github.com
 export R3C_BEARER_TOKEN=--api-token--
 
-rest POST /user/repos --json "{'name': 'test-repo1'}" --attributes "name, private, description, permissions"
+rest POST /user/repos --json '{"name": "test-repo1"}' --attributes "name, private, description, permissions"
 
 rest GET /user/repos --attributes "name, full_name, description, permissions.admin"
 
-rest POST /repos/soda480/test-repo1/labels --json "{'name': 'label1', 'color': 'C7EFD5'}" --attributes url
+rest POST /repos/soda480/test-repo1/labels --json '{"name":"label1", "color": "C7EFD5"}' --attributes url
 
-rest PATCH /repos/soda480/test-repo1/labels/label1 --json "{'description': 'my label'}" --attributes url
+rest PATCH /repos/soda480/test-repo1/labels/label1 --json '{"description": "my label"}' --attributes url
 
 rest DELETE /repos/soda480/test-repo1/labels/label1
 

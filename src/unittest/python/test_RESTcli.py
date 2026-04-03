@@ -50,7 +50,7 @@ class TestRESTcli(unittest.TestCase):
     @patch('rest3client.RESTcli.get_parser')
     def test__execute_Should_ConfigLogging_When_Debug(self, get_parser_patch, logging_patch, *patches):
         parser_mock = Mock()
-        parser_mock.parse_args.return_value = Namespace(debug=True)
+        parser_mock.parse_args.return_value = Namespace(debug=True, skip_ssl=False)
         get_parser_patch.return_value = parser_mock
         client = RESTcli(execute=False)
         client.execute()
@@ -64,11 +64,25 @@ class TestRESTcli(unittest.TestCase):
     @patch('rest3client.RESTcli.get_parser')
     def test__execute_Should_ConfigLogging_When_NoDebug(self, get_parser_patch, logging_patch, *patches):
         parser_mock = Mock()
-        parser_mock.parse_args.return_value = Namespace(debug=False)
+        parser_mock.parse_args.return_value = Namespace(debug=False, skip_ssl=False)
         get_parser_patch.return_value = parser_mock
         client = RESTcli(execute=False)
         client.execute()
         logging_patch.basicConfig.assert_called_with(level=logging_patch.ERROR)
+
+    @patch('rest3client.RESTcli.process_response')
+    @patch('rest3client.RESTcli.get_attributes')
+    @patch('rest3client.RESTcli.execute_request')
+    @patch('rest3client.RESTcli.get_client')
+    @patch('rest3client.restcli.logging')
+    @patch('rest3client.RESTcli.get_parser')
+    def test__execute_Should_SkipSSL_When_FlagProvided(self, get_parser_patch, logging_patch, get_client_patch, execute_request_patch, get_attributes_patch, process_response_patch):
+        parser_mock = Mock()
+        parser_mock.parse_args.return_value = Namespace(debug=False, skip_ssl=True)
+        get_parser_patch.return_value = parser_mock
+        client = RESTcli(execute=False)
+        client.execute()
+        execute_request_patch.assert_called_once_with(get_client_patch.return_value, skip_ssl=True)
 
     def test__get_parser_Should_CallExpected_When_Called(self, *patches):
         client = RESTcli(execute=False)
@@ -130,7 +144,7 @@ class TestRESTcli(unittest.TestCase):
 
     def test__get_arguments_Should_ReturnExpected_When_Values(self, *patches):
         client = RESTcli(execute=False)
-        client.args = Namespace(json_data="{'j1':'v1'}", headers_data="{'h1':'v1'}")
+        client.args = Namespace(json_data='{"j1":"v1"}', headers_data='{"h1":"v1"}', data=None)
         result = client.get_arguments()
         expected_result = {
             'json': {'j1': 'v1'},
@@ -140,7 +154,7 @@ class TestRESTcli(unittest.TestCase):
 
     def test__get_arguments_Should_ReturnExpected_When_NoValues(self, *patches):
         client = RESTcli(execute=False)
-        client.args = Namespace(json_data=None, headers_data=None)
+        client.args = Namespace(json_data=None, headers_data=None, data=None)
         result = client.get_arguments()
         expected_result = {}
         self.assertEqual(result, expected_result)
