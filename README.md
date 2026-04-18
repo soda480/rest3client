@@ -1,10 +1,8 @@
-# rest3client
 [![GitHub Workflow Status](https://github.com/soda480/rest3client/workflows/build/badge.svg)](https://github.com/soda480/rest3client/actions)
-[![coverage](https://img.shields.io/badge/coverage-91%25-brightgreen)](https://pybuilder.io/)
-[![complexity](https://img.shields.io/badge/complexity-A-brightgreen)](https://radon.readthedocs.io/en/latest/api.html#module-radon.complexity)
-[![vulnerabilities](https://img.shields.io/badge/vulnerabilities-None-brightgreen)](https://pypi.org/project/bandit/)
+![Coverage](https://raw.githubusercontent.com/soda480/rest3client/main/docs/badges/coverage.svg)
 [![PyPI version](https://badge.fury.io/py/rest3client.svg)](https://badge.fury.io/py/rest3client)
-[![python](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-teal)](https://www.python.org/downloads/)
+
+# rest3client
 
 rest3client is a Python library that builds upon the popular [requests](https://pypi.org/project/requests/), library, offering a higher-level, more streamlined API to interact with RESTful HTTP services. It simplifies tasks like handling standard request verbs, response parsing, error extraction, pagination, retries, and authentication.
 
@@ -287,7 +285,6 @@ bash
 
 Execute the build:
 ```sh
-pyb -X
+make dev
 ```
 
-NOTE: commands above assume working behind a proxy, if not then the proxy arguments to both the docker build and run commands can be removed.
