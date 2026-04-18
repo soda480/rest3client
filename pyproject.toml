@@ -26,8 +26,9 @@ classifiers = [
     "Topic :: Software Development",
     "Topic :: Software Development :: Libraries",
     "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Software Development :: Networking",
-    "Topic :: Software Development :: Systems Administrator",
+    "Topic :: Internet",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: System :: Systems Administration",
     "Topic :: Utilities",
 ]
 license = "Apache-2.0"
