@@ -16,6 +16,8 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     strategy:
       fail-fast: false
       matrix:
@@ -41,6 +43,8 @@ jobs:
 
   publish-and-release:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     if: "startsWith(github.ref, 'refs/tags')"
     needs: test
     steps:
@@ -61,6 +65,8 @@ jobs:
 
   publish-docker-image:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     if: "startsWith(github.ref, 'refs/tags')"
     needs: publish-and-release
     steps:
