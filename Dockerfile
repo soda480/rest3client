@@ -13,16 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-ARG PYTHON_VERSION=3.9
+ARG PYTHON_VERSION=3.12
 FROM python:${PYTHON_VERSION}-slim AS build-image
-ENV PYTHONDONTWRITEBYTECODE 1
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 WORKDIR /code
 COPY . /code/
-RUN pip install --upgrade pip && pip install pybuilder
-RUN pyb -X && pyb install
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends make && \
+    rm -rf /var/lib/apt/lists/*
+RUN pip install --upgrade pip faker mock && \
+    pip install -e .[dev] && \
+    make build
+
 
 FROM python:${PYTHON_VERSION}-slim
-ENV PYTHONDONTWRITEBYTECODE 1
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 WORKDIR /opt/rest3client
-COPY --from=build-image /code/target/dist/rest3client-*/dist/rest3client-*.tar.gz /opt/rest3client
+
+COPY --from=build-image /code/dist/rest3client-*.tar.gz /opt/rest3client
+
 RUN pip install rest3client-*.tar.gz
+
+ENTRYPOINT ["rest"]

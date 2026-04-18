@@ -20,7 +20,6 @@ import copy
 import logging
 import base64
 import requests
-from collections.abc import Iterable
 from functools import wraps
 
 from rest3client.ssladapter import SSLAdapter
