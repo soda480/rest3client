@@ -1,4 +1,4 @@
-[![GitHub Workflow Status](https://github.com/soda480/rest3client/workflows/build/badge.svg)](https://github.com/soda480/rest3client/actions)
+[![ci](https://github.com/soda480/rest3client/actions/workflows/ci.yml/badge.svg)](https://github.com/soda480/rest3client/actions/workflows/ci.yml)
 ![Coverage](https://raw.githubusercontent.com/soda480/rest3client/main/docs/badges/coverage.svg)
 [![PyPI version](https://badge.fury.io/py/rest3client.svg)](https://badge.fury.io/py/rest3client)
 
