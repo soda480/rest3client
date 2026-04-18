@@ -86,6 +86,7 @@ publish: dist
 	$(BIN)/twine upload \
 		--non-interactive --skip-existing \
 		--repository pypi \
+		--verbose \
 		dist/*
 
 clean:
