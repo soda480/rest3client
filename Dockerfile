@@ -25,8 +25,9 @@ COPY . /code/
 RUN apt-get update && \
     apt-get install -y --no-install-recommends make && \
     rm -rf /var/lib/apt/lists/*
-RUN pip install --upgrade pip faker mock 
-RUN pip install -e .[dev]
+RUN pip install --upgrade pip faker mock && \
+    pip install -e .[dev] && \
+    make build
 
 
 FROM python:${PYTHON_VERSION}-slim
@@ -35,5 +36,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /opt/rest3client
-COPY --from=build-image /code/target/dist/rest3client-*/dist/rest3client-*.tar.gz /opt/rest3client
+
+COPY --from=build-image /code/dist/rest3client-*.tar.gz /opt/rest3client
+
 RUN pip install rest3client-*.tar.gz
+
+ENTRYPOINT ["rest"]
